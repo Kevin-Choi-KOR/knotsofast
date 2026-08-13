@@ -13,8 +13,13 @@ import {
   CII_SCORE_BENCHMARK_MULTIPLIER,
   CII_SCORE_HIST_MULTIPLIER,
   CII_TREND_MONTHS,
+  CO2_CAR_TON_PER_KM,
+  CO2_CHICKEN_TON,
+  CO2_TREE_ABSORB_TON_PER_YEAR,
   COMPLIANCE_BASE_KRW,
+  EARTH_CIRCUMFERENCE_KM,
   MOCK_CII_SCORE_BY_VOYAGE,
+  MOCK_FLEET_ECO_RANKING,
 } from '@/mocks/carbon'
 import { CII_GRADES, ciiGradeFromScore, computeScope3Savings, computeVoyageEmissions } from '@/shared/utils/carbon'
 import { StatCards } from './components/StatCards'
@@ -23,6 +28,8 @@ import { CiiGauge } from './components/CiiGauge'
 import { CiiTrendChart } from './components/CiiTrendChart'
 import { CiiSimulator } from './components/CiiSimulator'
 import { AnchorCarbon } from './components/AnchorCarbon'
+import { FunFacts } from './components/FunFacts'
+import { EcoRanking, type EcoRankingRow } from './components/EcoRanking'
 
 export default function CarbonPage() {
   const { t } = useLanguage()
@@ -99,6 +106,30 @@ export default function CarbonPage() {
   const anchorSavedTon =
     anchorBaseline.sailingCo2Ton + anchorBaseline.anchorCo2Ton - (anchorOptimized.sailingCo2Ton + anchorOptimized.anchorCo2Ton)
 
+  // 재미 요소 환산 — 참고용 근사값
+  const treeCount = Math.round(scope3.savedTon / CO2_TREE_ABSORB_TON_PER_YEAR)
+  const earthLaps = scope3.savedTon / CO2_CAR_TON_PER_KM / EARTH_CIRCUMFERENCE_KM
+  const chickenCount = Math.round(scope3.savedTon / CO2_CHICKEN_TON)
+
+  // 선택된 선박은 목업 목록에서 제거한 뒤 실시간 계산값을 앞에 끼워 넣는다 — 결과는 항상 5행.
+  const fleetRanking: EcoRankingRow[] = [
+    {
+      vesselId: selectedVessel.id,
+      vesselName: selectedVessel.name,
+      co2SavedPct: scope3.savedPct,
+      co2SavedTon: scope3.savedTon,
+      isCurrent: true,
+    },
+    ...MOCK_FLEET_ECO_RANKING.filter((r) => r.vesselId !== selectedVessel.id).map((r) => ({
+      vesselId: r.vesselId,
+      vesselName: vessels.find((v) => v.id === r.vesselId)?.name ?? r.vesselId,
+      co2SavedPct: r.co2SavedPct,
+      co2SavedTon: r.co2SavedTon,
+      isCurrent: false,
+    })),
+  ].sort((a, b) => b.co2SavedPct - a.co2SavedPct)
+  const fleetRank = fleetRanking.findIndex((r) => r.isCurrent) + 1
+
   const comparisonRows: ComparisonRow[] = [
     {
       label: `${t.carbon.curVoyage} (${selectedVessel.name})`,
@@ -173,6 +204,11 @@ export default function CarbonPage() {
         <AnchorCarbon baseline={anchorBaseline} optimized={anchorOptimized} savedTon={anchorSavedTon} />
 
         <ComparisonTable rows={comparisonRows} />
+
+        <div className="grid overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 lg:grid-cols-[580px_1fr]">
+          <FunFacts savedTon={scope3.savedTon} treeCount={treeCount} earthLaps={earthLaps} chickenCount={chickenCount} />
+          <EcoRanking rows={fleetRanking} rank={fleetRank} total={fleetRanking.length} />
+        </div>
       </div>
     </div>
   )
