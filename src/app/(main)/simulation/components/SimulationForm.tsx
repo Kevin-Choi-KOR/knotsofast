@@ -1,6 +1,6 @@
 'use client'
 
-import { Anchor, Download, FlaskConical, PlayCircle } from 'lucide-react'
+import { Anchor, Download, FlaskConical } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import type { Vessel, Voyage } from '@/shared/types'
@@ -74,8 +74,6 @@ interface SimulationFormProps {
   compareVoyageId: string
   onCompareVoyageIdChange: (v: string) => void
 
-  isDirty: boolean
-  onRun: () => void
   onDownloadPdf: () => void
 }
 
@@ -105,8 +103,6 @@ export function SimulationForm({
   onBerthProgressChange,
   compareVoyageId,
   onCompareVoyageIdChange,
-  isDirty,
-  onRun,
   onDownloadPdf,
 }: SimulationFormProps) {
   const { t } = useLanguage()
@@ -119,9 +115,20 @@ export function SimulationForm({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-4 flex items-center gap-2">
-        <FlaskConical className="h-4 w-4 text-[#6366f1]" />
-        <span className="text-sm font-semibold">{t.simulation.conditions}</span>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <FlaskConical className="h-4 w-4 text-[#6366f1]" />
+          <span className="text-sm font-semibold">{t.simulation.conditions}</span>
+        </div>
+        <button
+          type="button"
+          onClick={onDownloadPdf}
+          title={t.simulation.downloadPdfHint}
+          className="flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          <Download className="h-3 w-3" />
+          {t.simulation.downloadPdf}
+        </button>
       </div>
 
       <div className="space-y-5">
@@ -288,36 +295,6 @@ export function SimulationForm({
           ) : (
             <p className="text-xs text-slate-500 dark:text-slate-400">{t.simulation.compareVoyageNone}</p>
           )}
-        </div>
-
-        {isDirty && (
-          <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-500" />
-            <span>{t.simulation.dirtyHint}</span>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onRun}
-            className={cn(
-              'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-medium text-white transition-colors',
-              isDirty ? 'bg-[#6366f1] hover:bg-[#4f46e5]' : 'cursor-default bg-slate-400 dark:bg-slate-600',
-            )}
-          >
-            <PlayCircle className="h-4 w-4" />
-            {t.simulation.runSim}
-          </button>
-          <button
-            type="button"
-            onClick={onDownloadPdf}
-            title={t.simulation.downloadPdfHint}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            <Download className="h-4 w-4" />
-            {t.simulation.downloadPdf}
-          </button>
         </div>
       </div>
     </div>
