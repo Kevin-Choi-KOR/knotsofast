@@ -1,5 +1,6 @@
 import type { FuelPoint, FuelType, Vessel, Voyage, EcoSpeedReport } from '@/shared/types'
 import { haversineNm, findClosestIndex, computeVoyageProgress, remainingRoute, type LatLng, type VoyageProgress } from '@/shared/lib/geo'
+import { resolveDeadline } from '@/shared/utils/format'
 
 /**
  * AI 운항 리포트의 모든 수치 계산 — 순수 함수만 둔다.
@@ -10,7 +11,7 @@ import { haversineNm, findClosestIndex, computeVoyageProgress, remainingRoute, t
  * shared/lib/geo에 있다 — 여기서는 재수출만 한다.
  */
 
-export { haversineNm, findClosestIndex, computeVoyageProgress, remainingRoute }
+export { haversineNm, findClosestIndex, computeVoyageProgress, remainingRoute, resolveDeadline }
 export type { LatLng, VoyageProgress }
 
 export type Confidence = 'high' | 'medium' | 'low'
@@ -86,14 +87,6 @@ export function fuelEmissionFactor(fuelType: FuelType): number {
 export function fuelCurveSpeedRange(fuelCurve: FuelPoint[]): { min: number; max: number } {
   const speeds = fuelCurve.map((p) => p.speedKnots)
   return { min: Math.min(...speeds), max: Math.max(...speeds) }
-}
-
-/** RTA가 확정이면 RTA, 아니면 STA를 마감 기준으로 쓴다 — 이 한 곳에서만 분기한다(12장 엣지케이스 #2). */
-export function resolveDeadline(voyage: Pick<Voyage, 'rta' | 'sta' | 'rtaConfirmed'>): {
-  term: 'RTA' | 'STA'
-  deadlineIso: string
-} {
-  return voyage.rtaConfirmed ? { term: 'RTA', deadlineIso: voyage.rta } : { term: 'STA', deadlineIso: voyage.sta }
 }
 
 export interface SpeedPlanInput {

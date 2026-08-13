@@ -1,4 +1,4 @@
-import type { FuelPoint, FuelType } from '@/shared/types'
+import type { FuelPoint, FuelType, Voyage } from '@/shared/types'
 
 // 날짜·숫자 로케일은 UI 언어와 무관하게 항상 ko-KR 고정이다.
 
@@ -63,6 +63,15 @@ export function fuelEmissionFactor(type?: FuelType): number {
     default:
       return 3.114
   }
+}
+
+// RTA가 확정이면 RTA, 아니면 STA를 마감 기준으로 쓴다 — AI 운항 리포트·물류 시뮬레이션이
+// 공유하므로 이 한 곳에서만 분기한다.
+export function resolveDeadline(voyage: Pick<Voyage, 'rta' | 'sta' | 'rtaConfirmed'>): {
+  term: 'RTA' | 'STA'
+  deadlineIso: string
+} {
+  return voyage.rtaConfirmed ? { term: 'RTA', deadlineIso: voyage.rta } : { term: 'STA', deadlineIso: voyage.sta }
 }
 
 // 커브 범위 밖은 가장 가까운 끝점으로 clamp한다.
