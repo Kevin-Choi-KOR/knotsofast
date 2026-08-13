@@ -35,6 +35,7 @@ import {
   SPEED_RECOMMENDATION_FAIL_ALERT,
 } from '@/features/dashboard/speedRecommendation'
 import { OWN_COMPANY_NAME } from '@/shared/constants'
+import { getFleetType } from '@/shared/utils/fleet'
 import type { MapLayers } from '@/features/dashboard/filters'
 import type { PortAggregate } from '@/features/dashboard/portAggregation'
 import type { AisPosition, EcoSpeedReport, Vessel, Voyage } from '@/shared/types'
@@ -76,7 +77,7 @@ export interface MapFocusTarget {
   lng: number
   zoom: number
   token: number // 매 클릭마다 증가 — 같은 좌표 재클릭도 반응하게 한다
-  marker?: { kind: 'issue' | 'port'; id: string } // 이동 후 이 마커 팝업을 자동으로 연다
+  marker?: { kind: 'issue' | 'port' | 'vessel'; id: string } // 이동 후 이 마커 팝업을 자동으로 연다
   direct?: boolean // true면 setView, false/undefined면 flyTo
 }
 
@@ -113,6 +114,8 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
   // 9.6/9.8장 — 리스트 클릭 시 팝업을 열 수 있도록 코드/id로 마커를 보관해둔다.
   const portMarkersRef = useRef<Map<string, Marker>>(new Map())
   const issueMarkersRef = useRef<Map<string, Marker>>(new Map())
+  // 함대 게이지 카드의 "현재 위치로 이동" 클릭 시 도착 후 팝업을 열 수 있도록 vesselId로 보관.
+  const vesselMarkersRef = useRef<Map<string, Marker>>(new Map())
   const [mapReady, setMapReady] = useState(false)
 
   // DASHBOARD.md 9.10장 — 지도 위 오버레이 UI 상태(전부 지도 타일이 아니라 우리가 그리는 정보에만 영향).
@@ -146,6 +149,7 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
     let handleResize: (() => void) | undefined
     const portMarkers = portMarkersRef.current
     const issueMarkers = issueMarkersRef.current
+    const vesselMarkers = vesselMarkersRef.current
 
     void (async () => {
       const L = await import('leaflet')
@@ -276,6 +280,7 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
       overlayLayerRef.current = null
       portMarkers.clear()
       issueMarkers.clear()
+      vesselMarkers.clear()
     }
   }, [])
 
@@ -339,6 +344,7 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
     if (!mapReady || !L || !layerGroup) return
 
     layerGroup.clearLayers()
+    vesselMarkersRef.current.clear()
     if (visibleVoyageIds.size === 0) return
 
     const labels = MAP_LABELS[mapLang]
@@ -356,6 +362,9 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
         const statusColor = VOYAGE_STATUS_COLOR[voyage.status]
         const displayRoute = getDisplayRoute(voyage)
         const isOwn = vessel.company === OWN_COMPANY_NAME
+        // 제안속도 전송은 함대 게이지 카드와 동일하게 "My"(자사+파트너) 범위 전체에서 가능해야
+        // 한다 — isOwn(문자 그대로 자사)만 쓰면 파트너 선박 팝업에 버튼이 안 보이게 된다.
+        const canSendSpeed = getFleetType(vessel) !== 'other'
 
         // 자사(My) 선박만 — 계획 항로 mouseover 시 AI 운항 리포트 요약을 툴팁으로 보여준다.
         // 리포트가 아직 없는 항차는 조용히 건너뛴다(점선은 그대로 그려지되 툴팁만 없음).
@@ -380,8 +389,9 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
         if (position) {
           const icon = buildVesselIcon(L, { isOwn, statusColor, cogDegrees: position.cogDegrees })
           const marker = L.marker([position.lat, wrapLng(position.lng)], { icon })
-          marker.bindPopup(buildVesselPopupHtml(vessel, voyage, position, isOwn, statusColor, labels))
+          marker.bindPopup(buildVesselPopupHtml(vessel, voyage, position, isOwn, canSendSpeed, statusColor, labels))
           marker.addTo(layerGroup)
+          vesselMarkersRef.current.set(vessel.id, marker)
         }
       } catch (err) {
         console.error('[MapView] failed to render voyage layer for', voyageId, err)
@@ -472,7 +482,7 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
     if (target.marker) {
       const { kind, id } = target.marker
       map.once('moveend', () => {
-        const markers = kind === 'issue' ? issueMarkersRef.current : portMarkersRef.current
+        const markers = kind === 'issue' ? issueMarkersRef.current : kind === 'vessel' ? vesselMarkersRef.current : portMarkersRef.current
         markers.get(id)?.openPopup()
       })
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { BrainCircuit, ChevronDown, Fuel, Gauge, Leaf, Loader2, LocateFixed, TrendingDown } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
@@ -176,9 +176,27 @@ export function FleetGaugeCard({
   const [search, setSearch] = useState('')
   // DASHBOARD.md 6.4장 — 전송 중인 선박 id를 Set으로 관리해 버튼별로 개별 로딩을 표시한다.
   const [sendingVesselIds, setSendingVesselIds] = useState<Set<string>>(new Set())
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const selectedCount = rows.filter((r) => selectedVoyageIds.has(r.voyage.id)).length
   const visibleRows = search.trim() ? rows.filter((r) => r.vessel.name.toLowerCase().includes(search.trim().toLowerCase())) : rows
+
+  // 마우스 휠(세로 스크롤)을 카드 가로 스크롤로 바꾼다 — 카드 위에서 휠을 굴렸을 때 페이지 전체가
+  // 상하로 스크롤되지 않고 선박 리스트만 좌우로 움직여야 한다. React의 onWheel은 passive 리스너로
+  // 등록돼 preventDefault가 먹지 않으므로, 네이티브 리스너를 { passive: false }로 직접 붙인다.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return
+      e.preventDefault()
+      el.scrollLeft += e.deltaY
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [expanded])
 
   const handleSendSpeed = async (row: FleetGaugeRow) => {
     setSendingVesselIds((prev) => new Set(prev).add(row.vessel.id))
@@ -245,7 +263,7 @@ export function FleetGaugeCard({
       </div>
 
       {expanded && (
-        <div className="mt-2 flex gap-2 overflow-x-auto">
+        <div ref={scrollRef} className="mt-2 flex gap-2 overflow-x-auto pb-2.5">
           {visibleRows.map((row) => (
             <VesselGaugeCard
               key={row.voyage.id}
