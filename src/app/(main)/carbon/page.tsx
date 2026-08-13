@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { FileText } from 'lucide-react'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { useVoyages } from '@/shared/hooks/useVoyages'
@@ -30,12 +31,14 @@ import { CiiSimulator } from './components/CiiSimulator'
 import { AnchorCarbon } from './components/AnchorCarbon'
 import { FunFacts } from './components/FunFacts'
 import { EcoRanking, type EcoRankingRow } from './components/EcoRanking'
+import { Scope3Modal } from './components/Scope3Modal'
 
 export default function CarbonPage() {
   const { t } = useLanguage()
   const { vessels } = useVessels()
   const { voyages } = useVoyages()
   const [voyageId, setVoyageId] = useState<string | null>(null)
+  const [certOpen, setCertOpen] = useState(false)
 
   // 자사(운항선) 항차만 대상 — 남의 배 배출량을 섞으면 규제 대응 자료로서 의미가 없다.
   const ownVoyages = useMemo(
@@ -160,24 +163,39 @@ export default function CarbonPage() {
       <PageHeader title={t.carbon.title} subtitle={t.carbon.subtitle(selectedVessel.name)} />
 
       <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            {t.carbon.voyageSelectLabel}
-          </label>
-          <select
-            value={selectedVoyage.id}
-            onChange={(e) => setVoyageId(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
-          >
-            {ownVoyages.map((voyage) => {
-              const vessel = vessels.find((v) => v.id === voyage.vesselId)
-              return (
-                <option key={voyage.id} value={voyage.id}>
-                  {vessel?.name} · {voyage.departurePort.split(' ')[0]} → {voyage.arrivalPort.split(' ')[0]}
-                </option>
-              )
-            })}
-          </select>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t.carbon.voyageSelectLabel}
+            </label>
+            <select
+              value={selectedVoyage.id}
+              onChange={(e) => setVoyageId(e.target.value)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
+            >
+              {ownVoyages.map((voyage) => {
+                const vessel = vessels.find((v) => v.id === voyage.vesselId)
+                return (
+                  <option key={voyage.id} value={voyage.id}>
+                    {vessel?.name} · {voyage.departurePort.split(' ')[0]} → {voyage.arrivalPort.split(' ')[0]}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+
+          {scope3.savedTon > 0 ? (
+            <button
+              type="button"
+              onClick={() => setCertOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#4f46e5]"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              {t.carbon.scope3Button}
+            </button>
+          ) : (
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t.carbon.scope3Unavailable}</span>
+          )}
         </div>
 
         <StatCards
@@ -210,6 +228,20 @@ export default function CarbonPage() {
           <EcoRanking rows={fleetRanking} rank={fleetRank} total={fleetRanking.length} />
         </div>
       </div>
+
+      {certOpen && (
+        <Scope3Modal
+          onClose={() => setCertOpen(false)}
+          voyageId={selectedVoyage.id}
+          vesselName={selectedVessel.name}
+          departurePort={selectedVoyage.departurePort}
+          arrivalPort={selectedVoyage.arrivalPort}
+          distanceNm={selectedVoyage.distanceNm}
+          cargoDescription={selectedVoyage.cargoDescription}
+          savedTon={scope3.savedTon}
+          savedPct={scope3.savedPct}
+        />
+      )}
     </div>
   )
 }
