@@ -38,10 +38,18 @@ export function draftFactor(cargoPercent: number): number {
   return 1 + (cargoPercent - 80) * 0.003
 }
 
+// 속도 슬라이더가 0kts까지 내려갈 수 있어, 나눗셈이 NaN/Infinity가 되지 않도록 두는
+// 계산상의 최소 속도 — 화면에는 노출되지 않는다.
+const MIN_EFFECTIVE_SPEED_KNOTS = 0.1
+
+function voyageDays(distanceNm: number, speedKnots: number): number {
+  return distanceNm / (Math.max(speedKnots, MIN_EFFECTIVE_SPEED_KNOTS) * 24)
+}
+
 // 해군 배수량 법칙(속도³ 비례) + 흘수 보정 — baseFuelPerDay는 선박마다 다르다(고정 상수를 쓰지 않는다).
 export function calcFuel(distanceNm: number, speedKnots: number, baseFuelPerDay: number, draftFactorValue: number): number {
-  const days = distanceNm / (speedKnots * 24)
-  return baseFuelPerDay * (speedKnots / REFERENCE_SPEED_KNOTS) ** 3 * days * draftFactorValue
+  const safeSpeed = Math.max(speedKnots, MIN_EFFECTIVE_SPEED_KNOTS)
+  return baseFuelPerDay * (safeSpeed / REFERENCE_SPEED_KNOTS) ** 3 * voyageDays(distanceNm, speedKnots) * draftFactorValue
 }
 
 export function routeDistanceOf(voyage: Voyage, route: SimRoute): number {
@@ -57,7 +65,7 @@ export function computePlannedResult(voyage: Voyage, vessel: Vessel, inputs: Sim
   const baseFuel = interpolateFuelTonPerDay(vessel.fuelCurve, REFERENCE_SPEED_KNOTS)
   const factor = draftFactor(inputs.cargoPercent)
   const fuel = calcFuel(voyage.distanceNm, voyage.plannedSpeedKnots, baseFuel, factor)
-  const days = voyage.distanceNm / (voyage.plannedSpeedKnots * 24)
+  const days = voyageDays(voyage.distanceNm, voyage.plannedSpeedKnots)
   const cost = fuel * 580 + canalCostOf(inputs.route)
   const co2 = fuel * fuelEmissionFactor(voyage.fuelType)
   return { fuel, days, cost, co2 }
@@ -79,7 +87,7 @@ export function computeSimulatedResult(
   const factor = draftFactor(inputs.cargoPercent)
   const distance = routeDistanceOf(voyage, inputs.route)
   const fuel = calcFuel(distance, inputs.speedKnots, baseFuel, factor)
-  const days = distance / (inputs.speedKnots * 24)
+  const days = voyageDays(distance, inputs.speedKnots)
 
   const etd = new Date(voyage.etd)
   etd.setHours(etd.getHours() + inputs.departureOffset)

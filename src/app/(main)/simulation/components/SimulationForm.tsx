@@ -225,7 +225,7 @@ export function SimulationForm({
           />
           <div className="mt-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>
-              {SPEED_MIN_KNOTS} kts ({t.simulation.slowSteam})
+              {SPEED_MIN_KNOTS} kts ({t.simulation.stopped})
             </span>
             <span>
               {SPEED_MAX_KNOTS} kts ({t.simulation.max})
