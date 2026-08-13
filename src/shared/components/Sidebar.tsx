@@ -185,7 +185,11 @@ function NavLink({
         <MenuIcon item={item} active={active} />
         {!collapsed && <span className="whitespace-nowrap">{label}</span>}
       </Link>
+      {/* 마우스 hover 시에만 노출되는 툴팁 위치 계산: 렌더 시점의 DOM 좌표가 필요해
+          ref.current를 직접 읽는다. */}
+      {/* eslint-disable-next-line react-hooks/refs */}
       {collapsed && hovered && linkRef.current && (
+        // eslint-disable-next-line react-hooks/refs
         <Tooltip label={label} anchor={linkRef.current.getBoundingClientRect()} />
       )}
     </div>
@@ -232,6 +236,9 @@ export function Sidebar() {
 
   useEffect(() => {
     const saved = localStorage.getItem(COLLAPSE_STORAGE_KEY)
+    // 마운트 후 1회만 실행되는 localStorage 동기화: 서버 렌더(false)와
+    // 하이드레이션 불일치를 피하려고 의도적으로 effect에서 갱신한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === 'true') setCollapsed(true)
   }, [])
 

@@ -21,6 +21,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(STORAGE_KEY) as Theme | null
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     const initial = saved ?? (prefersDark ? 'dark' : 'light')
+    // 마운트 후 1회만 실행되는 클라이언트 전용 동기화: 서버 렌더('light')와
+    // 하이드레이션 불일치를 피하려고 의도적으로 effect에서 갱신한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initial !== 'light') setTheme(initial)
   }, [])
 

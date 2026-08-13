@@ -71,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // user === null 상태에서 먼저 판단해 /login으로 리다이렉트해 버린다.
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
+    // 마운트 후 1회만 실행되는 하이드레이션 완료 신호: 의도적으로 effect에서 갱신한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
