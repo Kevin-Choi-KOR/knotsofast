@@ -18,7 +18,7 @@ export function EcoRanking({ rows, rank, total }: { rows: EcoRankingRow[]; rank:
   const { t } = useLanguage()
 
   return (
-    <div className="flex h-full flex-col p-5 lg:border-l lg:border-slate-200 lg:pl-5 dark:lg:border-slate-800">
+    <div className="flex h-full flex-col bg-gradient-to-br from-[#6366f1]/5 to-purple-500/5 p-5 lg:border-l lg:border-slate-200 lg:pl-5 dark:from-[#6366f1]/10 dark:to-purple-500/10 dark:lg:border-slate-800">
       <div className="flex items-center gap-2">
         <Medal className="h-4 w-4 text-amber-500" />
         <span className="text-sm font-semibold">{t.carbon.rankTitle}</span>
