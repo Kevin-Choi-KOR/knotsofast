@@ -1,5 +1,4 @@
 import { OWN_COMPANY_NAME } from '@/shared/constants'
-import { formatDate, formatDateTime } from '@/shared/utils/format'
 import { formatPortLabel, getPortCode, type Port } from '@/mocks/ports'
 import type { RegionalIssue, TyphoonWarning } from '@/mocks/map-overlays'
 import type { PortAggregate, PortVesselEntry } from '@/features/dashboard/portAggregation'
@@ -24,13 +23,13 @@ function portRowDetail(entry: PortVesselEntry, section: 'berthed' | 'departing' 
   const { voyage } = entry
   if (section === 'berthed') {
     return voyage.status === 'preparing'
-      ? labels.portEtd(formatDateTime(voyage.etd))
-      : `${labels.eta}: ${formatDateTime(voyage.eta)}`
+      ? labels.portEtd(labels.formatDateTime(voyage.etd))
+      : `${labels.eta}: ${labels.formatDateTime(voyage.eta)}`
   }
   if (section === 'departing') {
-    return labels.portBoundFor(voyage.arrivalPort.split(' ')[0], formatDate(voyage.eta))
+    return labels.portBoundFor(voyage.arrivalPort.split(' ')[0], labels.formatDate(voyage.eta))
   }
-  return labels.portFrom(voyage.departurePort.split(' ')[0], formatDateTime(voyage.eta))
+  return labels.portFrom(voyage.departurePort.split(' ')[0], labels.formatDateTime(voyage.eta))
 }
 
 function portSectionHtml(
@@ -134,7 +133,7 @@ export function buildVesselPopupHtml(
   const rows = [
     [labels.voyage, `${portShortLabel(voyage.departurePort)} → ${portShortLabel(voyage.arrivalPort)}`],
     [labels.currentSpeed, `${position.speedKnots.toFixed(1)} kts`],
-    [labels.eta, formatDate(voyage.eta)],
+    [labels.eta, labels.formatDate(voyage.eta)],
   ]
   const rowsHtml = rows
     .map(

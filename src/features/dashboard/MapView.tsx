@@ -225,6 +225,12 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
       weatherPane.style.zIndex = '400'
       weatherPane.style.pointerEvents = 'none'
 
+      // 항구 마커를 선박 마커(markerPane, z-index 600) 위에 고정하기 위한 커스텀 pane.
+      // clearLayers() 후 재생성 시 DOM 삽입 순서만으로는 항상 위/아래가 뒤집힐 수 있어
+      // effect 실행 순서에 의존하지 않는 pane 분리로 확실히 고정한다(KNOWN_PITFALLS.md 2.2).
+      const portPane = map.createPane('portPane')
+      portPane.style.zIndex = '620'
+
       voyageLayerRef.current = L.layerGroup().addTo(map)
       portLayerRef.current = L.layerGroup().addTo(map)
       overlayLayerRef.current = L.layerGroup().addTo(map)
@@ -311,7 +317,7 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
       const agg = portAggregates.get(port.code)
       const count = (agg?.berthed.length ?? 0) + (agg?.departing.length ?? 0) + (agg?.arriving.length ?? 0)
 
-      const marker = L.marker([port.lat, wrapLng(port.lng)], { icon: buildPortIcon(L, count) })
+      const marker = L.marker([port.lat, wrapLng(port.lng)], { icon: buildPortIcon(L, count), pane: 'portPane' })
       marker.bindPopup(buildPortPopupHtml(port, agg, labels))
       marker.addTo(layerGroup)
       portMarkersRef.current.set(port.code, marker)

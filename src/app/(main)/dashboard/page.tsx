@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { PageHeader } from '@/shared/components/PageHeader'
+import { useLanguage } from '@/features/i18n/LanguageContext'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { useVoyages } from '@/shared/hooks/useVoyages'
 import { usePositions } from '@/shared/hooks/usePositions'
@@ -27,6 +28,7 @@ import type { MapFocusTarget, MapViewProps } from '@/features/dashboard/MapView'
 const MapView = dynamic<MapViewProps>(() => import('@/features/dashboard/MapView'), { ssr: false })
 
 export default function Page() {
+  const { t } = useLanguage()
   const { vessels } = useVessels()
   const { voyages } = useVoyages()
   const { positions } = usePositions()
@@ -181,7 +183,7 @@ export default function Page() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <PageHeader title="실시간 운항 대시보드" subtitle="선박 위치 및 항로·해상 기상 현황">
+      <PageHeader title={t.dashboard.title} subtitle={t.dashboard.subtitle}>
         <AutoRefreshControl />
       </PageHeader>
 

@@ -7,6 +7,7 @@ import { cn } from '@/shared/utils/cn'
 import { formatShortDateTime } from '@/shared/utils/format'
 import { getPortCode } from '@/mocks/ports'
 import { AI_REPORT_VESSEL_STORAGE_KEY } from '@/shared/constants'
+import { useLanguage } from '@/features/i18n/LanguageContext'
 import { VoyageBadge } from '@/shared/components/StatusBadge'
 import { HorizontalGauge } from '@/features/dashboard/HorizontalGauge'
 import {
@@ -37,6 +38,7 @@ interface VesselGaugeCardProps {
 
 function VesselGaugeCard({ row, selected, onToggle, onLocate, sending, onSendSpeed }: VesselGaugeCardProps) {
   const router = useRouter()
+  const { t } = useLanguage()
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -110,21 +112,21 @@ function VesselGaugeCard({ row, selected, onToggle, onLocate, sending, onSendSpe
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <HorizontalGauge
             icon={Fuel}
-            label="연료 소모"
-            value={`${row.fuelTonPerDay.toFixed(1)}t/일`}
+            label={t.dashboard.gaugeFuelRate}
+            value={`${row.fuelTonPerDay.toFixed(1)}t${t.dashboard.perDay}`}
             percent={row.fuelCapacityPercent}
             barClassName="bg-[#6366f1]"
           />
           <HorizontalGauge
             icon={Leaf}
-            label="탄소 배출"
-            value={`${row.co2TonPerDay.toFixed(1)}t/일`}
+            label={t.dashboard.gaugeCo2}
+            value={`${row.co2TonPerDay.toFixed(1)}t${t.dashboard.perDay}`}
             percent={row.co2FleetPercent}
             barClassName="bg-orange-500"
           />
           <HorizontalGauge
             icon={TrendingDown}
-            label="연료 절감"
+            label={t.dashboard.gaugeFuelSaving}
             value={`${row.fuelSavingPercent.toFixed(0)}%`}
             percent={row.fuelSavingPercent}
             barClassName="bg-green-500"
@@ -132,7 +134,7 @@ function VesselGaugeCard({ row, selected, onToggle, onLocate, sending, onSendSpe
         </div>
         <div className="flex w-28 shrink-0 flex-col justify-center gap-1 border-l border-slate-200 pl-2 text-[11px] dark:border-slate-700">
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400">현재 속도</span>
+            <span className="text-slate-500 dark:text-slate-400">{t.dashboard.currentSpeed}</span>
             <span className="font-semibold text-slate-900 dark:text-slate-100">{row.position.speedKnots.toFixed(1)}kt</span>
           </div>
           <div className="flex items-center justify-between">
@@ -140,7 +142,7 @@ function VesselGaugeCard({ row, selected, onToggle, onLocate, sending, onSendSpe
             <span className="font-semibold text-slate-900 dark:text-slate-100">{formatShortDateTime(row.voyage.eta)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400">권장 속도</span>
+            <span className="text-slate-500 dark:text-slate-400">{t.dashboard.recSpeed}</span>
             <span className="font-semibold text-green-600">{row.voyage.recommendedSpeedKnots.toFixed(1)}kt</span>
           </div>
         </div>
@@ -170,6 +172,7 @@ export function FleetGaugeCard({
   onToggleExpanded,
   onLocateVessel,
 }: FleetGaugeCardProps) {
+  const { t } = useLanguage()
   const [search, setSearch] = useState('')
   // DASHBOARD.md 6.4장 — 전송 중인 선박 id를 Set으로 관리해 버튼별로 개별 로딩을 표시한다.
   const [sendingVesselIds, setSendingVesselIds] = useState<Set<string>>(new Set())
@@ -214,7 +217,7 @@ export function FleetGaugeCard({
           className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300"
         >
           <Fuel size={14} className="text-slate-400" />
-          운항 중 선박 연료·탄소 현황
+          {t.dashboard.fleetGaugeTitle}
           <ChevronDown size={14} className={cn('transition-transform', !expanded && '-rotate-90')} />
         </button>
 
@@ -228,14 +231,14 @@ export function FleetGaugeCard({
               className="w-32 rounded-md border border-slate-200 px-2 py-1 text-xs focus:border-[#6366f1] focus:outline-none dark:border-slate-700 dark:bg-slate-900"
             />
             <button type="button" onClick={onSelectAll} className="text-xs font-medium text-[#6366f1] hover:text-[#4f46e5]">
-              전체 선택
+              {t.dashboard.selectAll}
             </button>
             <span className="text-slate-300 dark:text-slate-600">|</span>
             <button type="button" onClick={onDeselectAll} className="text-xs font-medium text-slate-500 hover:text-slate-700">
-              전체 해제
+              {t.dashboard.deselectAll}
             </button>
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {selectedCount}/{rows.length}개 지도 표시 중
+              {t.dashboard.shownOnMap(String(selectedCount), String(rows.length))}
             </span>
           </div>
         )}

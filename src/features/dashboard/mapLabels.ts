@@ -37,6 +37,27 @@ export interface MapLabels {
   portEtd: (etd: string) => string
   portBoundFor: (destination: string, etaDate: string) => string
   portFrom: (origin: string, eta: string) => string
+  // DASHBOARD.md 14장 23번 — 날짜·숫자는 ko-KR 고정이되, 지도 팝업만 선택된 지도 언어의
+  // 로케일을 따른다. 팝업 빌더가 앱 전역 formatDate/formatDateTime(ko-KR 고정)을 쓰지 않도록
+  // 언어별 포맷터를 사전 자체에 들고 있는다.
+  formatDate: (iso: string) => string
+  formatDateTime: (iso: string) => string
+}
+
+function makeDateFormatter(locale: string): (iso: string) => string {
+  return (iso: string): string => new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+function makeDateTimeFormatter(locale: string): (iso: string) => string {
+  return (iso: string): string =>
+    new Date(iso).toLocaleDateString(locale, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
 }
 
 const STATUS_KO: Record<VoyageStatus, string> = {
@@ -127,6 +148,8 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `출항 예정: ${etd}`,
     portBoundFor: (dest, date) => `목적지: ${dest} · ETA ${date}`,
     portFrom: (origin, eta) => `출발: ${origin} · ETA ${eta}`,
+    formatDate: makeDateFormatter('ko-KR'),
+    formatDateTime: makeDateTimeFormatter('ko-KR'),
   },
   en: {
     ownFleet: 'Our Fleet',
@@ -161,6 +184,8 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `Departing: ${etd}`,
     portBoundFor: (dest, date) => `Bound for: ${dest} · ETA ${date}`,
     portFrom: (origin, eta) => `From: ${origin} · ETA ${eta}`,
+    formatDate: makeDateFormatter('en-US'),
+    formatDateTime: makeDateTimeFormatter('en-US'),
   },
   zh: {
     ownFleet: '自有船舶',
@@ -195,6 +220,8 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `预计出发: ${etd}`,
     portBoundFor: (dest, date) => `目的地: ${dest} · 预计到达 ${date}`,
     portFrom: (origin, eta) => `出发地: ${origin} · 预计到达 ${eta}`,
+    formatDate: makeDateFormatter('zh-CN'),
+    formatDateTime: makeDateTimeFormatter('zh-CN'),
   },
   ja: {
     ownFleet: '自社船',
@@ -229,5 +256,7 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `出港予定: ${etd}`,
     portBoundFor: (dest, date) => `目的地: ${dest} · ETA ${date}`,
     portFrom: (origin, eta) => `出発地: ${origin} · ETA ${eta}`,
+    formatDate: makeDateFormatter('ja-JP'),
+    formatDateTime: makeDateTimeFormatter('ja-JP'),
   },
 }

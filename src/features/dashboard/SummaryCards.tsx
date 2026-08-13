@@ -95,14 +95,14 @@ function CarbonEmissionCard({ currentCo2TonPerDay }: CarbonEmissionCardProps) {
           <Leaf size={14} className="shrink-0 text-slate-400" />
           <span className="text-[11px] text-slate-500 dark:text-slate-400">{t.dashboard.statCo2Target}</span>
         </div>
-        <span className="text-base font-bold text-slate-900 dark:text-slate-100">{formatNumber(targetCo2TonPerDay, 1)}t/일</span>
+        <span className="text-base font-bold text-slate-900 dark:text-slate-100">{formatNumber(targetCo2TonPerDay, 1)}t{t.dashboard.perDay}</span>
       </div>
       <div className="flex flex-col items-center justify-center gap-0.5 border-l border-slate-200 pl-2 dark:border-slate-700">
         <div className="flex items-center gap-1">
           <Leaf size={14} className="shrink-0 text-green-500" />
           <span className="text-[11px] text-slate-500 dark:text-slate-400">{t.dashboard.statCo2Current}</span>
         </div>
-        <span className="text-base font-bold text-green-600">{formatNumber(currentCo2TonPerDay, 1)}t/일</span>
+        <span className="text-base font-bold text-green-600">{formatNumber(currentCo2TonPerDay, 1)}t{t.dashboard.perDay}</span>
       </div>
     </div>
   )
