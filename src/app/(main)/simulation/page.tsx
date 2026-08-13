@@ -23,6 +23,7 @@ import { SavingsCard } from './components/SavingsCard'
 import { EtaCard } from './components/EtaCard'
 import { ComparisonChart } from './components/ComparisonChart'
 import { SpeedCurveChart } from './components/SpeedCurveChart'
+import { generateSimulationPdf } from './components/simulationPdf'
 
 export default function SimulationPage() {
   const { t } = useLanguage()
@@ -127,6 +128,23 @@ export default function SimulationPage() {
   const historical = compareVoyage && compareVessel ? computeHistoricalResult(compareVoyage, compareVessel) : null
   const saving = computeSaving(planned, simulated)
 
+  const downloadPdf = () => {
+    // 화면과 달리 항상 applied 값만 넘긴다 — 초안이 섞이지 않도록 주의.
+    const doc = generateSimulationPdf({
+      voyage: appliedVoyage,
+      vessel: appliedVessel,
+      applied,
+      compareVoyage: compareVoyage ?? null,
+      planned,
+      simulated,
+      historical,
+      saving,
+      portWaitHours,
+      portWaitCostUsd: portWaitHours * WAIT_COST_USD_PER_HOUR,
+    })
+    doc.save(`KSF-Simulation-${appliedVoyage.id}-${Date.now()}.pdf`)
+  }
+
   return (
     <div className="flex h-full flex-col">
       <PageHeader title={t.simulation.title} subtitle={t.simulation.subtitle} />
@@ -156,7 +174,7 @@ export default function SimulationPage() {
             onCompareVoyageIdChange={setCompareVoyageId}
             isDirty={isDirty}
             onRun={runSimulation}
-            onDownloadPdf={() => {}}
+            onDownloadPdf={downloadPdf}
           />
 
           <div className="space-y-4">
