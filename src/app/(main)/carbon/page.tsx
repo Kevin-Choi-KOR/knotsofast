@@ -22,6 +22,7 @@ import { ComparisonTable, type ComparisonRow } from './components/ComparisonTabl
 import { CiiGauge } from './components/CiiGauge'
 import { CiiTrendChart } from './components/CiiTrendChart'
 import { CiiSimulator } from './components/CiiSimulator'
+import { AnchorCarbon } from './components/AnchorCarbon'
 
 export default function CarbonPage() {
   const { t } = useLanguage()
@@ -84,6 +85,19 @@ export default function CarbonPage() {
   const avoidedGrade = gradeIdx < 4 ? CII_GRADES[gradeIdx + 1] : currentGrade
   const complianceRiskKrw = COMPLIANCE_BASE_KRW * (current.totalCo2Ton / ANCHOR_REFERENCE_CO2_TON)
   const complianceAmountLabel = `${(complianceRiskKrw / 1e8).toFixed(0)}억원`
+
+  // 원본 예시(voy001, CO₂ 3,976.4t)에서 잡은 비율을 선택 항차의 실제 총량에 맞춰 환산한다.
+  const anchorScale = current.totalCo2Ton / ANCHOR_REFERENCE_CO2_TON
+  const anchorBaseline = {
+    sailingCo2Ton: Number((100 * anchorScale).toFixed(1)),
+    anchorCo2Ton: Number((30 * anchorScale).toFixed(1)),
+  }
+  const anchorOptimized = {
+    sailingCo2Ton: Number((85 * anchorScale).toFixed(1)),
+    anchorCo2Ton: 0,
+  }
+  const anchorSavedTon =
+    anchorBaseline.sailingCo2Ton + anchorBaseline.anchorCo2Ton - (anchorOptimized.sailingCo2Ton + anchorOptimized.anchorCo2Ton)
 
   const comparisonRows: ComparisonRow[] = [
     {
@@ -155,6 +169,8 @@ export default function CarbonPage() {
             complianceAmountLabel={complianceAmountLabel}
           />
         </div>
+
+        <AnchorCarbon baseline={anchorBaseline} optimized={anchorOptimized} savedTon={anchorSavedTon} />
 
         <ComparisonTable rows={comparisonRows} />
       </div>
