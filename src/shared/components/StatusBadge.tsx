@@ -4,7 +4,7 @@ import { cn } from '@/shared/utils/cn'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import type { VoyageStatus, VesselStatus } from '@/shared/types'
 
-const BASE_CLASS = 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium'
+const BASE_CLASS = 'inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium'
 
 const VOYAGE_CLASS: Record<VoyageStatus, string> = {
   preparing: 'bg-slate-100 text-slate-600',

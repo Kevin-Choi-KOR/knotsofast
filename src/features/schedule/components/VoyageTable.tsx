@@ -38,7 +38,13 @@ export function VoyageTable({ voyages, vessels, positions, onRowClick }: VoyageT
                 t.schedule.colStatus,
                 '',
               ].map((label, i) => (
-                <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th
+                  key={i}
+                  className={cn(
+                    'px-4 py-3 text-left text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-slate-400',
+                    i === 1 && 'w-px',
+                  )}
+                >
                   {label}
                 </th>
               ))}
@@ -83,7 +89,7 @@ export function VoyageTable({ voyages, vessels, positions, onRowClick }: VoyageT
                       <FleetBadge type={getFleetType(vessel)} />
                     </td>
 
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200">
                         <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
                         {portFirstToken(voyage.departurePort)}
@@ -93,14 +99,14 @@ export function VoyageTable({ voyages, vessels, positions, onRowClick }: VoyageT
                       <div className="mt-0.5 max-w-40 truncate text-xs text-slate-400">{voyage.cargoDescription}</div>
                     </td>
 
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                         <CalendarDays className="h-3 w-3 shrink-0" />
                         {formatLocalTime(voyage.etd, departureOffset)}
                       </div>
                     </td>
 
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className={cn('text-sm', voyage.status === 'delayed' ? 'text-red-600' : 'text-slate-700 dark:text-slate-200')}>
                         ETA {formatLocalTime(voyage.eta, arrivalOffset)}
                       </div>

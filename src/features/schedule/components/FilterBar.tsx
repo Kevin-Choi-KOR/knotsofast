@@ -108,7 +108,7 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* ③ 선단 구분 필터 */}
+      {/* ③ 선단 구분 + 조회기간 필터 */}
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.common.fleetFilterLabel}</span>
         <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
@@ -123,10 +123,9 @@ export function FilterBar({
             </button>
           ))}
         </div>
-      </div>
 
-      {/* ④ 조회기간 필터 */}
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <span className="h-4 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
+
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{t.schedule.dateRangeLabel}</span>
         <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
           {(['etd', 'eta', 'rta'] as const).map((basis) => (
