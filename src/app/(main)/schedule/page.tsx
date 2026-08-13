@@ -15,13 +15,14 @@ import { SCHEDULE_CALENDAR_DATE_STORAGE_KEY } from '@/shared/constants'
 import { FilterBar, type ViewTab } from '@/features/schedule/components/FilterBar'
 import { VoyageTable } from '@/features/schedule/components/VoyageTable'
 import { ScheduleCalendar } from '@/features/schedule/components/ScheduleCalendar'
+import { VoyageModal } from '@/features/schedule/components/VoyageModal'
 import { applyFleetDateFilter, applyStatusSearchFilter, sortVoyages, type DateBasis } from '@/features/schedule/lib/schedule'
 
 type ModalState = { mode: 'create' } | { mode: 'view'; voyage: Voyage }
 
 export default function Page() {
   const { t } = useLanguage()
-  const { voyages, isLoading: voyagesLoading } = useVoyages()
+  const { voyages, isLoading: voyagesLoading, mutate: mutateVoyages } = useVoyages()
   const { vessels, isLoading: vesselsLoading } = useVessels()
   const { positions, isLoading: positionsLoading } = usePositions()
 
@@ -125,6 +126,16 @@ export default function Page() {
           />
         )}
       </div>
+
+      {modalState && (
+        <VoyageModal
+          mode={modalState.mode}
+          voyage={modalState.mode === 'view' ? modalState.voyage : null}
+          vessels={vessels}
+          onClose={() => setModalState(null)}
+          mutateVoyages={mutateVoyages}
+        />
+      )}
     </div>
   )
 }
