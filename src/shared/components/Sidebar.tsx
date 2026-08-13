@@ -10,13 +10,10 @@ import {
   ChevronRight,
   Menu,
   X,
-  LayoutDashboard,
-  FileBarChart,
-  Leaf,
-  SlidersHorizontal,
-  CalendarClock,
-  Sailboat,
-  UserCog,
+  FlaskConical,
+  CalendarDays,
+  Anchor,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -28,12 +25,23 @@ const COLLAPSE_STORAGE_KEY = 'ksf-sidebar-collapsed'
 
 type LabelKey = keyof Translations['nav']
 
+interface EmojiIcon {
+  kind: 'emoji'
+  base: string
+  hover: string
+  animation: 'crossfade' | 'bounce'
+  colorClass: string
+}
+
+interface LucideIcon {
+  kind: 'lucide'
+  Icon: typeof FlaskConical
+}
+
 interface MenuItem {
   href: string
   labelKey: LabelKey
-  Icon: typeof LayoutDashboard
-  iconColor: string
-  iconBg: string
+  icon: EmojiIcon | LucideIcon
   roles: UserRole[]
 }
 
@@ -41,57 +49,43 @@ const MENU_ITEMS: MenuItem[] = [
   {
     href: '/dashboard',
     labelKey: 'dashboard',
-    Icon: LayoutDashboard,
-    iconColor: 'text-blue-600 dark:text-blue-400',
-    iconBg: 'bg-blue-500/10',
+    icon: { kind: 'emoji', base: '🚢', hover: '🌍', animation: 'crossfade', colorClass: 'text-blue-600' },
     roles: ['ADMIN', 'LOGISTICS', 'CAPTAIN', 'CLIENT'],
   },
   {
     href: '/ai-report',
     labelKey: 'aiReport',
-    Icon: FileBarChart,
-    iconColor: 'text-violet-600 dark:text-violet-400',
-    iconBg: 'bg-violet-500/10',
+    icon: { kind: 'emoji', base: '✨', hover: '✨', animation: 'bounce', colorClass: 'text-yellow-600' },
     roles: ['ADMIN', 'LOGISTICS', 'CAPTAIN'],
   },
   {
     href: '/carbon',
     labelKey: 'carbon',
-    Icon: Leaf,
-    iconColor: 'text-green-600 dark:text-green-400',
-    iconBg: 'bg-green-500/10',
+    icon: { kind: 'emoji', base: '🍃', hover: '🌳', animation: 'crossfade', colorClass: 'text-green-600' },
     roles: ['ADMIN', 'LOGISTICS'],
   },
   {
     href: '/simulation',
     labelKey: 'simulation',
-    Icon: SlidersHorizontal,
-    iconColor: 'text-amber-600 dark:text-amber-400',
-    iconBg: 'bg-amber-500/10',
+    icon: { kind: 'lucide', Icon: FlaskConical },
     roles: ['ADMIN', 'LOGISTICS'],
   },
   {
     href: '/schedule',
     labelKey: 'schedule',
-    Icon: CalendarClock,
-    iconColor: 'text-sky-600 dark:text-sky-400',
-    iconBg: 'bg-sky-500/10',
+    icon: { kind: 'lucide', Icon: CalendarDays },
     roles: ['ADMIN', 'LOGISTICS'],
   },
   {
     href: '/vessel',
     labelKey: 'vessel',
-    Icon: Sailboat,
-    iconColor: 'text-teal-600 dark:text-teal-400',
-    iconBg: 'bg-teal-500/10',
+    icon: { kind: 'lucide', Icon: Anchor },
     roles: ['ADMIN', 'LOGISTICS', 'CAPTAIN'],
   },
   {
     href: '/admin/users',
     labelKey: 'users',
-    Icon: UserCog,
-    iconColor: 'text-rose-600 dark:text-rose-400',
-    iconBg: 'bg-rose-500/10',
+    icon: { kind: 'lucide', Icon: Users },
     roles: ['ADMIN'],
   },
 ]
@@ -101,16 +95,26 @@ function isActive(pathname: string, href: string) {
 }
 
 function MenuIcon({ item, active }: { item: MenuItem; active: boolean }) {
-  const { Icon, iconColor, iconBg } = item
+  if (item.icon.kind === 'lucide') {
+    const { Icon } = item.icon
+    return <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-[#6366f1]' : '')} />
+  }
+
+  const { base, hover, animation, colorClass } = item.icon
   return (
-    <span
-      className={cn(
-        'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg shadow-sm ring-1 ring-black/5 transition-all duration-200 group-hover:scale-105 dark:ring-white/10',
-        iconBg,
-        active && 'shadow-md',
+    <span className={cn('nav-emoji-nudge inline-flex w-4 h-4 shrink-0 items-center justify-center', colorClass)}>
+      {animation === 'crossfade' ? (
+        <span className="relative inline-block w-4 h-4 text-sm leading-none">
+          <span className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 group-hover:opacity-0">
+            {base}
+          </span>
+          <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            {hover}
+          </span>
+        </span>
+      ) : (
+        <span className="inline-block text-sm leading-none group-hover:animate-bounce">{base}</span>
       )}
-    >
-      <Icon className={cn('h-3.5 w-3.5', iconColor)} />
     </span>
   )
 }
