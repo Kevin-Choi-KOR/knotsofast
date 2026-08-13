@@ -10,7 +10,9 @@ export interface EcoRankingEntry {
 }
 
 // CARBON.md 5.4장과 동일한 규칙: 운항 중·지연 항차 우선, 없으면 첫 항차.
-function pickRepresentativeVoyage(vesselId: string, voyages: Voyage[]): Voyage | undefined {
+// 탄소 배출 화면의 에코 랭킹 딥링크(10.3장)도 같은 규칙으로 대표 항차를 골라야
+// 대시보드에서 보이는 절감률과 탄소 배출 화면에서 열리는 항차가 일치한다.
+export function pickRepresentativeVoyage(vesselId: string, voyages: Voyage[]): Voyage | undefined {
   const vesselVoyages = voyages.filter((v) => v.vesselId === vesselId)
   return vesselVoyages.find((v) => v.status === 'underway' || v.status === 'delayed') ?? vesselVoyages[0]
 }

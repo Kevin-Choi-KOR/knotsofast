@@ -1,12 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { useVoyages } from '@/shared/hooks/useVoyages'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import { getFleetType } from '@/shared/utils/fleet'
+import { CARBON_VESSEL_STORAGE_KEY } from '@/shared/constants'
+import { pickRepresentativeVoyage } from '@/features/dashboard/ecoRanking'
 import {
   ANCHOR_REFERENCE_CO2_TON,
   CARBON_COMPARISON_LABELS,
@@ -45,6 +47,20 @@ export default function CarbonPage() {
     () => voyages.filter((v) => getFleetType(vessels.find((ves) => ves.id === v.vesselId)) === 'own'),
     [voyages, vessels],
   )
+
+  // 대시보드 "이번 항차 에코 랭킹" 카드 → 탄소 배출 화면 딥링크(DASHBOARD.md 10.3장). 1회성
+  // sessionStorage 키를 마운트 시 읽고 즉시 제거한 뒤, 랭킹과 동일한 규칙(대표 항차)으로 연다.
+  useEffect(() => {
+    const vesselId = sessionStorage.getItem(CARBON_VESSEL_STORAGE_KEY)
+    // 항차 데이터가 아직 로드되기 전이면 대표 항차를 찾을 수 없으니, 로드될 때까지
+    // 키를 지우지 않고 기다린다(너무 일찍 지우면 데이터 도착 후에는 딥링크를 영영 못 연다).
+    if (!vesselId || ownVoyages.length === 0) return
+    sessionStorage.removeItem(CARBON_VESSEL_STORAGE_KEY)
+    const voyage = pickRepresentativeVoyage(vesselId, ownVoyages)
+    if (!voyage) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVoyageId(voyage.id)
+  }, [ownVoyages])
 
   const selectedVoyage = ownVoyages.find((v) => v.id === voyageId) ?? ownVoyages[0]
   const selectedVessel = vessels.find((v) => v.id === selectedVoyage?.vesselId)

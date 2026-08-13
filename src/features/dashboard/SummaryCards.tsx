@@ -218,7 +218,7 @@ function WeeklyScheduleCard({ vessels, voyages }: WeeklyScheduleCardProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="grid grid-cols-7 justify-items-center gap-0.5">
         {days.map((day) => {
           const events = ownVoyages.flatMap((voyage) => {
             const out: { type: 'etd' | 'rta'; status: Voyage['status']; vesselName: string }[] = []
@@ -239,7 +239,7 @@ function WeeklyScheduleCard({ vessels, voyages }: WeeklyScheduleCardProps) {
                 sessionStorage.setItem(SCHEDULE_CALENDAR_DATE_STORAGE_KEY, day.toISOString())
                 router.push('/schedule')
               }}
-              className="flex flex-col items-center gap-0.5 py-0.5"
+              className="flex flex-col items-center gap-0.5 pt-1.5 pb-0.5"
             >
               <span className="text-[9px] text-slate-400">{WEEKDAY_LABELS[day.getDay()]}</span>
               {isToday ? (
