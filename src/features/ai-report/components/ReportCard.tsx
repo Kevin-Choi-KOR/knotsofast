@@ -202,16 +202,36 @@ export function ReportCard({
           <div className="w-20 text-center text-sm text-slate-600 dark:text-slate-300">
             {t.aiReport[VESSEL_TYPE_KEY[vessel.type]]}
           </div>
-          <div className={cn('w-28 text-sm font-medium', fuelSaving.increase ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
-            {fuelSaving.text}
+
+          <div className="w-28 text-center">
+            <div
+              className={cn(
+                'text-lg font-bold',
+                fuelSaving.increase ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400',
+              )}
+            >
+              {fuelSaving.text}
+            </div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{t.aiReport.fuelSavingCumulative}</div>
           </div>
-          <div className="flex w-40 items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
-            <span>{view.currentSpeedKnots.toFixed(1)}</span>
-            <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
-            <span className="font-semibold text-[#6366f1]">{view.speedPlan.recommendedSpeedKnots.toFixed(1)}</span>
+
+          <div className="w-40 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-lg font-bold text-slate-700 dark:text-slate-200">
+              <span>{view.currentSpeedKnots.toFixed(1)}</span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
+              <span className="text-[#6366f1]">{view.speedPlan.recommendedSpeedKnots.toFixed(1)}</span>
+              <span className="text-xs font-normal text-slate-400">kts</span>
+            </div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{t.aiReport.headerSpeedLabel}</div>
           </div>
-          <div className={cn('w-44 text-sm font-semibold', CONFIDENCE_TEXT_CLASS[probability.confidence])}>
-            {Math.round(probability.percent)}%
+
+          <div className="w-44 text-center">
+            <div className={cn('text-lg font-bold', CONFIDENCE_TEXT_CLASS[probability.confidence])}>
+              {Math.round(probability.percent)}%
+            </div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">
+              {t.aiReport.headerProbabilityLabel(view.deadline.term)}
+            </div>
           </div>
         </div>
 
