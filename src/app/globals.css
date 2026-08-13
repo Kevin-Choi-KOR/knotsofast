@@ -85,3 +85,19 @@ body {
 .map-marker-pulse {
   animation: map-marker-pulse 1.3s ease-in-out infinite alternate;
 }
+
+/* 태풍·지역 이슈 마커 깜빡임(KNOWN_PITFALLS.md 2.6) — Leaflet이 위치 이동에 쓰는
+   래퍼(className)가 아니라 divIcon html 내부의 자식 div에 붙여야 transform이 충돌하지 않는다. */
+@keyframes map-marker-alert {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.map-marker-alert {
+  animation: map-marker-alert 1.5s ease-in-out infinite;
+}

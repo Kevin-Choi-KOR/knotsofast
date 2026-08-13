@@ -171,7 +171,7 @@ export default function CarbonPage() {
             <select
               value={selectedVoyage.id}
               onChange={(e) => setVoyageId(e.target.value)}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
             >
               {ownVoyages.map((voyage) => {
                 const vessel = vessels.find((v) => v.id === voyage.vesselId)

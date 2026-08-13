@@ -22,15 +22,15 @@ export function FunFacts({ savedTon, treeCount, earthLaps, chickenCount }: FunFa
       <div className="mt-3 space-y-2">
         <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
           <TreePine className="h-4 w-4 shrink-0 text-green-600" />
-          <span className="text-sm">{t.carbon.funTrees(treeCount.toLocaleString('ko-KR'))}</span>
+          <span className="text-base">{t.carbon.funTrees(treeCount.toLocaleString('ko-KR'))}</span>
         </div>
         <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
           <Car className="h-4 w-4 shrink-0 text-blue-500" />
-          <span className="text-sm">{t.carbon.funEarthLaps(earthLaps.toFixed(1))}</span>
+          <span className="text-base">{t.carbon.funEarthLaps(earthLaps.toFixed(1))}</span>
         </div>
         <div className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
           <UtensilsCrossed className="h-4 w-4 shrink-0 text-amber-500" />
-          <span className="text-sm">{t.carbon.funChicken(chickenCount.toLocaleString('ko-KR'))}</span>
+          <span className="text-base">{t.carbon.funChicken(chickenCount.toLocaleString('ko-KR'))}</span>
         </div>
       </div>
 

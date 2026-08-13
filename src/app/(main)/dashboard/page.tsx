@@ -17,17 +17,17 @@ import {
   showVesselsForFilters,
   type QuickFilterKey,
 } from '@/features/dashboard/filters'
-import type { MapViewHandle } from '@/features/dashboard/MapView'
+import type { MapViewHandle, MapViewProps } from '@/features/dashboard/MapView'
 
 // Leaflet은 window에 의존한다 — 반드시 SSR을 끄고 동적 import 한다(DASHBOARD.md 9.1장).
-const MapView = dynamic(() => import('@/features/dashboard/MapView'), { ssr: false })
+const MapView = dynamic<MapViewProps>(() => import('@/features/dashboard/MapView'), { ssr: false })
 
 export default function Page() {
   const { vessels } = useVessels()
   const { voyages } = useVoyages()
   const { positions } = usePositions()
 
-  const mapViewRef = useRef<MapViewHandle>(null)
+  const mapHandleRef = useRef<MapViewHandle | null>(null)
 
   const activeVoyages = useMemo(
     () => voyages.filter((voyage) => voyage.status === 'underway' || voyage.status === 'delayed'),
@@ -135,7 +135,7 @@ export default function Page() {
       if (!wasActive) setSelectedVoyageIds(new Set(fleetGaugeRows.map((row) => row.voyage.id)))
       setGaugesOpen((v) => !v)
     }
-    mapViewRef.current?.resetView()
+    mapHandleRef.current?.resetView()
   }
 
   const toggleDestination = (code: string | null) => {
@@ -177,7 +177,14 @@ export default function Page() {
 
       {/* 지도 영역 */}
       <div className="relative min-h-[500px] flex-1">
-        <MapView ref={mapViewRef} />
+        <MapView
+          vessels={vessels}
+          voyages={voyages}
+          layers={layers}
+          onReady={(handle) => {
+            mapHandleRef.current = handle
+          }}
+        />
       </div>
     </div>
   )
