@@ -191,9 +191,13 @@ export default function CarbonPage() {
             >
               {ownVoyages.map((voyage) => {
                 const vessel = vessels.find((v) => v.id === voyage.vesselId)
+                const eta = new Date(voyage.eta)
+                // 같은 선박·같은 항로의 서로 다른 항차를 구분할 수 있도록 도착 예정일을 붙인다.
+                const etaShort = `${String(eta.getMonth() + 1).padStart(2, '0')}/${String(eta.getDate()).padStart(2, '0')}`
                 return (
                   <option key={voyage.id} value={voyage.id}>
-                    {vessel?.name} · {voyage.departurePort.split(' ')[0]} → {voyage.arrivalPort.split(' ')[0]}
+                    {vessel?.name} · {voyage.departurePort.split(' ')[0]} → {voyage.arrivalPort.split(' ')[0]} · ETA{' '}
+                    {etaShort}
                   </option>
                 )
               })}
