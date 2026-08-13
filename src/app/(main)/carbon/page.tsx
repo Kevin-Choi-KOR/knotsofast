@@ -7,15 +7,21 @@ import { useVoyages } from '@/shared/hooks/useVoyages'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import { getFleetType } from '@/shared/utils/fleet'
 import {
+  ANCHOR_REFERENCE_CO2_TON,
   CARBON_COMPARISON_LABELS,
   CARBON_HIST_MULTIPLIER,
   CII_SCORE_BENCHMARK_MULTIPLIER,
   CII_SCORE_HIST_MULTIPLIER,
+  CII_TREND_MONTHS,
+  COMPLIANCE_BASE_KRW,
   MOCK_CII_SCORE_BY_VOYAGE,
 } from '@/mocks/carbon'
-import { ciiGradeFromScore, computeScope3Savings, computeVoyageEmissions } from '@/shared/utils/carbon'
+import { CII_GRADES, ciiGradeFromScore, computeScope3Savings, computeVoyageEmissions } from '@/shared/utils/carbon'
 import { StatCards } from './components/StatCards'
 import { ComparisonTable, type ComparisonRow } from './components/ComparisonTable'
+import { CiiGauge } from './components/CiiGauge'
+import { CiiTrendChart } from './components/CiiTrendChart'
+import { CiiSimulator } from './components/CiiSimulator'
 
 export default function CarbonPage() {
   const { t } = useLanguage()
@@ -67,6 +73,17 @@ export default function CarbonPage() {
     totalFuelTon: scope3.benchmarkFuelTon,
     totalCo2Ton: scope3.benchmarkCo2Ton,
   }
+
+  // 7개월치를 현재 점수로 끝나도록 역산 — 7개월에 걸쳐 18% 개선된 것처럼 보이는 우하향 곡선
+  const ciiTrendScores = CII_TREND_MONTHS.map((_, i) => Number((baseCiiScore * (1.18 - 0.18 * (i / 6))).toFixed(2)))
+
+  const gradeIdx = CII_GRADES.indexOf(currentGrade)
+  const ciiSimOptimizedScore = Number((baseCiiScore * 0.85).toFixed(2))
+  const ciiSimOptimizedGrade = ciiGradeFromScore(ciiSimOptimizedScore)
+  // 회피 등급 = 감속하지 않았다면 떨어졌을, 현재보다 한 단계 나쁜 등급
+  const avoidedGrade = gradeIdx < 4 ? CII_GRADES[gradeIdx + 1] : currentGrade
+  const complianceRiskKrw = COMPLIANCE_BASE_KRW * (current.totalCo2Ton / ANCHOR_REFERENCE_CO2_TON)
+  const complianceAmountLabel = `${(complianceRiskKrw / 1e8).toFixed(0)}억원`
 
   const comparisonRows: ComparisonRow[] = [
     {
@@ -125,6 +142,19 @@ export default function CarbonPage() {
           totalFuelTon={current.totalFuelTon}
           vsBenchmarkPct={scope3.savedPct}
         />
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <CiiGauge score={baseCiiScore} grade={currentGrade} />
+          <CiiTrendChart months={CII_TREND_MONTHS} scores={ciiTrendScores} />
+          <CiiSimulator
+            currentGrade={currentGrade}
+            optimizedGrade={ciiSimOptimizedGrade}
+            plannedSpeedKnots={selectedVoyage.plannedSpeedKnots}
+            recommendedSpeedKnots={selectedVoyage.recommendedSpeedKnots}
+            avoidedGrade={avoidedGrade}
+            complianceAmountLabel={complianceAmountLabel}
+          />
+        </div>
 
         <ComparisonTable rows={comparisonRows} />
       </div>
