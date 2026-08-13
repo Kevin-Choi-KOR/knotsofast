@@ -45,7 +45,7 @@ export default function Page() {
       {/* 이슈·항구 리스트 패널 — "이슈"/"항구" 빠른 필터가 생기는 L2 이후 조건부 렌더링 */}
 
       {/* 지도 영역 */}
-      <div className="flex min-h-[500px] flex-1">
+      <div className="relative min-h-[500px] flex-1">
         <MapView />
       </div>
     </div>

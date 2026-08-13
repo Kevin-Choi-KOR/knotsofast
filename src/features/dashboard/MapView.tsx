@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import type { Map as LeafletMap, LayerGroup, TileLayer } from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { WORLD_BOUNDS } from '@/features/dashboard/mapCoords'
 
 const ERROR_TILE_URL =
@@ -85,7 +86,9 @@ export default function MapView() {
         map.invalidateSize()
       }
       window.addEventListener('resize', handleResize)
-    })()
+    })().catch((err) => {
+      console.error('[MapView] failed to initialize', err)
+    })
 
     return () => {
       active = false
@@ -100,10 +103,5 @@ export default function MapView() {
     }
   }, [])
 
-  return (
-    <>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <div ref={containerRef} className="h-full w-full" />
-    </>
-  )
+  return <div ref={containerRef} className="absolute inset-0" />
 }
