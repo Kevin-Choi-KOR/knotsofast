@@ -1,6 +1,6 @@
 'use client'
 
-import { Anchor, Download, FlaskConical } from 'lucide-react'
+import { Anchor, Download, FlaskConical, RotateCcw, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import type { Vessel, Voyage } from '@/shared/types'
@@ -75,6 +75,8 @@ interface SimulationFormProps {
   onCompareVoyageIdChange: (v: string) => void
 
   onDownloadPdf: () => void
+  onReset: () => void
+  onApplyAiRecommendation: () => void
 }
 
 function voyageOptionLabel(voyage: Voyage, vessels: Vessel[]): string {
@@ -104,6 +106,8 @@ export function SimulationForm({
   compareVoyageId,
   onCompareVoyageIdChange,
   onDownloadPdf,
+  onReset,
+  onApplyAiRecommendation,
 }: SimulationFormProps) {
   const { t } = useLanguage()
 
@@ -297,6 +301,28 @@ export function SimulationForm({
               {t.simulation.berthWaitSub(berthWaitHint.toFixed(1))}
             </p>
           </div>
+        </div>
+
+        <div className="border-t border-slate-200 pt-5 dark:border-slate-800">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onApplyAiRecommendation}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#6366f1] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t.simulation.aiRecommend}
+            </button>
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {t.simulation.reset}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">{t.simulation.aiRecommendDesc}</p>
         </div>
       </div>
     </div>
