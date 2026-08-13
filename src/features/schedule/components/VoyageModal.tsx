@@ -117,7 +117,7 @@ function DateTimeField({
           value={parts.hour12}
           disabled={disabled}
           onChange={(e) => update({ hour12: e.target.value })}
-          className={cn(fieldClass(!!disabled, error), 'w-11 px-1')}
+          className={cn(fieldClass(!!disabled, error), 'w-14 flex-1 px-1')}
         >
           {HOURS.map((h) => (
             <option key={h} value={h}>
@@ -129,7 +129,7 @@ function DateTimeField({
           value={parts.minute}
           disabled={disabled}
           onChange={(e) => update({ minute: e.target.value })}
-          className={cn(fieldClass(!!disabled, error), 'w-11 px-1')}
+          className={cn(fieldClass(!!disabled, error), 'w-14 flex-1 px-1')}
         >
           {MINUTES.map((m) => (
             <option key={m} value={m}>
@@ -141,7 +141,7 @@ function DateTimeField({
           value={parts.ampm}
           disabled={disabled}
           onChange={(e) => update({ ampm: e.target.value as AmPm })}
-          className={cn(fieldClass(!!disabled, error), 'min-w-[56px] flex-1 appearance-none text-center')}
+          className={cn(fieldClass(!!disabled, error), 'w-12 shrink-0 appearance-none px-0 text-center')}
         >
           <option value="AM">{t.modal.am}</option>
           <option value="PM">{t.modal.pm}</option>
@@ -165,7 +165,6 @@ export function VoyageModal({ mode, voyage, vessels, onClose, mutateVoyages }: V
   const [form, setForm] = useState<FormState>(() => initialForm(voyage))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [etaPreview, setEtaPreview] = useState('')
   const [dragCounter, setDragCounter] = useState(0)
   const [isParsingPdf, setIsParsingPdf] = useState(false)
@@ -356,6 +355,7 @@ export function VoyageModal({ mode, voyage, vessels, onClose, mutateVoyages }: V
 
   async function handleDelete() {
     if (!voyage) return
+    if (!window.confirm(t.modal.deleteConfirm)) return
     await fetch(`/api/voyages/${voyage.id}`, { method: 'DELETE' })
     await mutateVoyages()
     onClose()
@@ -626,44 +626,31 @@ export function VoyageModal({ mode, voyage, vessels, onClose, mutateVoyages }: V
             </div>
           )}
 
-          {isEditing && (
-            <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-              {confirmingDelete ? (
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="text-slate-600 dark:text-slate-300">{t.modal.deleteConfirm}</span>
-                  <button type="button" onClick={handleDelete} className="font-medium text-red-600 hover:underline">
-                    {t.modal.deleteVoyage}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(false)}
-                    className="text-slate-500 hover:underline dark:text-slate-400"
-                  >
-                    {t.modal.cancel}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  className="text-xs font-medium text-red-600 hover:underline"
-                >
-                  {t.modal.deleteVoyage}
-                </button>
-              )}
-            </div>
-          )}
         </form>
 
-        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-800">
-          <Button variant="ghost" onClick={onClose}>
-            {isCreate ? t.modal.cancel : t.modal.close}
-          </Button>
-          {(isCreate || editableFields !== 'none') && (
-            <Button type="submit" form="voyage-form" disabled={submitting}>
-              {isCreate ? (submitting ? t.modal.submitting : t.modal.submit) : t.modal.save}
+        <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 dark:border-slate-800">
+          <div>
+            {isEditing && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleDelete}
+                className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                {t.modal.deleteVoyage}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={onClose}>
+              {isCreate ? t.modal.cancel : t.modal.close}
             </Button>
-          )}
+            {(isCreate || editableFields !== 'none') && (
+              <Button type="submit" form="voyage-form" disabled={submitting}>
+                {isCreate ? (submitting ? t.modal.submitting : t.modal.submit) : t.modal.save}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
