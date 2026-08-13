@@ -1,10 +1,102 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { PageHeader } from '@/shared/components/PageHeader'
+import { LoadingState } from '@/shared/components/Spinner'
+import { Button } from '@/shared/components/Button'
+import { useLanguage } from '@/features/i18n/LanguageContext'
+import { useVoyages } from '@/shared/hooks/useVoyages'
+import { useVessels } from '@/shared/hooks/useVessels'
+import { usePositions } from '@/shared/hooks/usePositions'
+import type { VoyageStatus } from '@/shared/types'
+import type { FleetType } from '@/shared/utils/fleet'
+import { FilterBar, type ViewTab } from '@/features/schedule/components/FilterBar'
+import { VoyageTable } from '@/features/schedule/components/VoyageTable'
+import { applyFleetDateFilter, applyStatusSearchFilter, sortVoyages, type DateBasis } from '@/features/schedule/lib/schedule'
 
 export default function Page() {
+  const { t } = useLanguage()
+  const { voyages, isLoading: voyagesLoading } = useVoyages()
+  const { vessels, isLoading: vesselsLoading } = useVessels()
+  const { positions, isLoading: positionsLoading } = usePositions()
+
+  const [viewTab, setViewTab] = useState<ViewTab>('list')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<VoyageStatus | 'all'>('all')
+  const [fleetTypes, setFleetTypes] = useState<ReadonlySet<FleetType>>(() => new Set<FleetType>(['own']))
+  const [dateBasis, setDateBasis] = useState<DateBasis>('eta')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const isLoading = voyagesLoading || vesselsLoading || positionsLoading
+
+  const dateFleetFiltered = useMemo(
+    () => applyFleetDateFilter(voyages, vessels, { fleetTypes, dateBasis, dateFrom, dateTo }),
+    [voyages, vessels, fleetTypes, dateBasis, dateFrom, dateTo],
+  )
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<VoyageStatus | 'all', number> = {
+      all: dateFleetFiltered.length,
+      preparing: 0,
+      underway: 0,
+      delayed: 0,
+      completed: 0,
+      cancelled: 0,
+    }
+    for (const v of dateFleetFiltered) counts[v.status] += 1
+    return counts
+  }, [dateFleetFiltered])
+
+  const visibleVoyages = useMemo(() => {
+    const filtered = applyStatusSearchFilter(dateFleetFiltered, vessels, statusFilter, search)
+    return sortVoyages(filtered)
+  }, [dateFleetFiltered, vessels, statusFilter, search])
+
+  function toggleFleetType(type: FleetType) {
+    setFleetTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
+      return next
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="물류 일정 관리" />
-      <div className="flex-1 overflow-y-auto p-6" />
+      <PageHeader title={t.schedule.title} subtitle={t.schedule.subtitle}>
+        <Button size="sm" className="flex items-center gap-1.5">
+          <Plus className="h-4 w-4" />
+          {t.schedule.addVoyage}
+        </Button>
+      </PageHeader>
+
+      <FilterBar
+        viewTab={viewTab}
+        onViewTabChange={setViewTab}
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        statusCounts={statusCounts}
+        fleetTypes={fleetTypes}
+        onToggleFleetType={toggleFleetType}
+        dateBasis={dateBasis}
+        onDateBasisChange={setDateBasis}
+        dateFrom={dateFrom}
+        onDateFromChange={setDateFrom}
+        dateTo={dateTo}
+        onDateToChange={setDateTo}
+      />
+
+      <div className="flex-1 overflow-y-auto p-6">
+        {isLoading ? (
+          <LoadingState />
+        ) : viewTab === 'list' ? (
+          <VoyageTable voyages={visibleVoyages} vessels={vessels} positions={positions} onRowClick={() => {}} />
+        ) : null}
+      </div>
     </div>
   )
 }
