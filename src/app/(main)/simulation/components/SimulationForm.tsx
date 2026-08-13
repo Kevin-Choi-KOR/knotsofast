@@ -132,21 +132,44 @@ export function SimulationForm({
       </div>
 
       <div className="space-y-5">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
-            {t.simulation.targetVoyage}
-          </label>
-          <select
-            value={voyageId}
-            onChange={(e) => onVoyageIdChange(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
-          >
-            {ownVoyages.map((voyage) => (
-              <option key={voyage.id} value={voyage.id}>
-                {voyageOptionLabel(voyage, vessels)}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t.simulation.targetVoyage}
+            </label>
+            <select
+              value={voyageId}
+              onChange={(e) => onVoyageIdChange(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
+            >
+              {ownVoyages.map((voyage) => (
+                <option key={voyage.id} value={voyage.id}>
+                  {voyageOptionLabel(voyage, vessels)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t.simulation.compareVoyage}
+            </label>
+            {completedVoyages.length > 0 ? (
+              <select
+                value={compareVoyageId}
+                onChange={(e) => onCompareVoyageIdChange(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
+              >
+                {completedVoyages.map((voyage) => (
+                  <option key={voyage.id} value={voyage.id}>
+                    {voyageOptionLabel(voyage, vessels)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t.simulation.compareVoyageNone}</p>
+            )}
+          </div>
         </div>
 
         <div>
@@ -274,27 +297,6 @@ export function SimulationForm({
               {t.simulation.berthWaitSub(berthWaitHint.toFixed(1))}
             </p>
           </div>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
-            {t.simulation.compareVoyage}
-          </label>
-          {completedVoyages.length > 0 ? (
-            <select
-              value={compareVoyageId}
-              onChange={(e) => onCompareVoyageIdChange(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-[#6366f1] dark:border-slate-700 dark:bg-slate-800"
-            >
-              {completedVoyages.map((voyage) => (
-                <option key={voyage.id} value={voyage.id}>
-                  {voyageOptionLabel(voyage, vessels)}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t.simulation.compareVoyageNone}</p>
-          )}
         </div>
       </div>
     </div>
