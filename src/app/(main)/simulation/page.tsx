@@ -54,11 +54,13 @@ export default function SimulationPage() {
 
   useEffect(() => {
     if (initialized || voyages.length === 0) return
-    const defaultVoyageId = ownVoyages[0]?.id ?? ''
+    const defaultVoyage = ownVoyages[0]
     const defaultCompareVoyageId = completedVoyages[0]?.id ?? ''
     // 데이터 로딩 완료 시점에 딱 한 번만 기본값을 채우는 초기화라 effect에서 직접 갱신한다.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setVoyageId(defaultVoyageId)
+    setVoyageId(defaultVoyage?.id ?? '')
+    // 첫 화면부터 그 항차의 실제 계획 속도로 슬라이더를 맞춘다(고정 14가 아니라 실데이터 기준).
+    if (defaultVoyage) setSpeedKnots(defaultVoyage.plannedSpeedKnots)
     setCompareVoyageId(defaultCompareVoyageId)
     setInitialized(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,10 +104,18 @@ export default function SimulationPage() {
   const defaultVoyageId = ownVoyages[0]?.id ?? ''
   const defaultCompareVoyageId = completedVoyages[0]?.id ?? ''
 
+  // 항차를 바꾸면 그 항차의 실제 계획 속도로 속도 슬라이더를 맞춘다 — 그러지 않으면
+  // 항차를 바꿔도 이전 항차의 속도값이 그대로 남아 결과가 체감상 안 바뀐 것처럼 보인다.
+  const handleVoyageIdChange = (id: string) => {
+    setVoyageId(id)
+    const nextVoyage = ownVoyages.find((v) => v.id === id)
+    if (nextVoyage) setSpeedKnots(nextVoyage.plannedSpeedKnots)
+  }
+
   const resetToDefaults = () => {
     setVoyageId(defaultVoyageId)
     setDepartureOffset(0)
-    setSpeedKnots(14)
+    setSpeedKnots(ownVoyages[0]?.plannedSpeedKnots ?? 14)
     setCargoPercent(80)
     setRoute('suez')
     setPortCongestion('medium')
@@ -161,7 +171,7 @@ export default function SimulationPage() {
             vessels={vessels}
             selectedVoyage={selectedVoyage}
             voyageId={voyageId}
-            onVoyageIdChange={setVoyageId}
+            onVoyageIdChange={handleVoyageIdChange}
             departureOffset={departureOffset}
             onDepartureOffsetChange={setDepartureOffset}
             speedKnots={speedKnots}
