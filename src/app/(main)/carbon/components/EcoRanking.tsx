@@ -36,8 +36,8 @@ export function EcoRanking({ rows, rank, total }: { rows: EcoRankingRow[]; rank:
           <div
             key={row.vesselId}
             className={cn(
-              'flex items-center gap-2 rounded-lg px-3 py-2',
-              row.isCurrent && 'bg-[#6366f1]/10 ring-1 ring-[#6366f1]/30',
+              'flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900',
+              row.isCurrent && 'border-[#6366f1] ring-1 ring-[#6366f1]/30',
             )}
           >
             <span className="w-5 shrink-0 text-center text-xs">{MEDALS[i] ?? i + 1}</span>
