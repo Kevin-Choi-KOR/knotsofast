@@ -69,7 +69,7 @@ export function AiRecommendationCard({
 
       {status === 'success' && reasoning && (
         <div className="mt-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-          <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-600 dark:text-slate-300">
+          <ul className="list-none space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
             {reasoning
               .split('\n')
               .filter((line) => line.trim().length > 0)

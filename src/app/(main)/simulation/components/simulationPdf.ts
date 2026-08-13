@@ -1,7 +1,13 @@
 import { jsPDF } from 'jspdf'
 import type { Vessel, Voyage } from '@/shared/types'
-import type { SimInputs, SimulationResult } from '@/shared/utils/simulation'
+import type { SimInputs, SimRoute, SimulationResult } from '@/shared/utils/simulation'
 import { CONGESTION_WAIT_HOURS } from '@/mocks/simulation'
+
+const ROUTE_LABEL_EN: Record<SimRoute, string> = {
+  default: 'Default (no canal)',
+  suez: 'Suez Canal',
+  cape: 'Cape of Good Hope',
+}
 
 // Helvetica가 지원하는 예외 문자 — 이 밖의 non-Latin-1 문자는 '?'로 치환한다.
 const WINANSI_SAFE_EXTRA = new Set(['—', '–', '‘', '’', '“', '”', '…', '•', '€'])
@@ -108,7 +114,7 @@ export function generateSimulationPdf(params: SimulationPdfParams): jsPDF {
   row('Departure Adjustment', departureAdjustmentText(applied.departureOffset))
   row('Speed', `${applied.speedKnots} kts`)
   row('Cargo Load', `${applied.cargoPercent}%`)
-  row('Route', applied.route === 'suez' ? 'Suez Canal' : 'Cape of Good Hope')
+  row('Route', ROUTE_LABEL_EN[applied.route])
   row(
     'Destination Port Congestion',
     `${CONGESTION_EN[applied.portCongestion]} (~${CONGESTION_WAIT_HOURS[applied.portCongestion]}h wait)`,

@@ -116,11 +116,15 @@ export function buildIssuePopupHtml(issue: RegionalIssue, labels: MapLabels): st
 
 // DASHBOARD.md 9.7장 — 선박 마커 팝업. 자사 선박이면 맨 아래에 "제안속도 전송" 버튼.
 // 실제 전송은 9.11장 popupopen 이벤트 위임으로 연결한다(data-send-speed-* 속성으로 대상 식별).
+// isOwn(문자 그대로 자사)과 canSendSpeed(자사+파트너, "My" 범위)를 분리한다 — 파트너 선박은
+// 회사명 표기는 그대로 두되, 함대 게이지 카드(자사+파트너 전부에 버튼 노출)와 동일하게
+// 제안속도 전송은 가능해야 한다.
 export function buildVesselPopupHtml(
   vessel: Vessel,
   voyage: Voyage,
   position: AisPosition,
   isOwn: boolean,
+  canSendSpeed: boolean,
   statusColor: string,
   labels: MapLabels,
 ): string {
@@ -142,7 +146,7 @@ export function buildVesselPopupHtml(
     )
     .join('')
 
-  const sendSpeedBtn = isOwn
+  const sendSpeedBtn = canSendSpeed
     ? `<button type="button" data-send-speed-vessel-id="${escapeHtml(vessel.id)}" data-send-speed-voyage-id="${escapeHtml(voyage.id)}" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;background:#6366f1;color:white;font-size:11px;font-weight:600;border:none;cursor:pointer;">${escapeHtml(labels.sendSpeedBtn)}</button>`
     : ''
 

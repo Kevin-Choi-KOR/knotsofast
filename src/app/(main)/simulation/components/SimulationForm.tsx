@@ -1,6 +1,6 @@
 'use client'
 
-import { Anchor, Download, FlaskConical, RotateCcw, Sparkles } from 'lucide-react'
+import { Anchor, Download, FlaskConical, Loader2, RotateCcw, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import type { Vessel, Voyage } from '@/shared/types'
@@ -85,6 +85,7 @@ interface SimulationFormProps {
   onDownloadPdf: () => void
   onReset: () => void
   onApplyAiRecommendation: () => void
+  isApplyingAiRecommendation: boolean
 }
 
 function voyageOptionLabel(voyage: Voyage, vessels: Vessel[]): string {
@@ -116,6 +117,7 @@ export function SimulationForm({
   onDownloadPdf,
   onReset,
   onApplyAiRecommendation,
+  isApplyingAiRecommendation,
 }: SimulationFormProps) {
   const { t } = useLanguage()
 
@@ -223,7 +225,7 @@ export function SimulationForm({
           />
           <div className="mt-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>
-              {SPEED_MIN_KNOTS} kts ({t.simulation.slowSteam})
+              {SPEED_MIN_KNOTS} kts ({t.simulation.stopped})
             </span>
             <span>
               {SPEED_MAX_KNOTS} kts ({t.simulation.max})
@@ -251,7 +253,13 @@ export function SimulationForm({
           <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
             {t.simulation.route}
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <OptionButton
+              active={route === 'default'}
+              onClick={() => onRouteChange('default')}
+              title={t.simulation.routeDefault}
+              subtitle={t.simulation.defaultSub(suezDistance.toLocaleString('en-US'))}
+            />
             <OptionButton
               active={route === 'suez'}
               onClick={() => onRouteChange('suez')}
@@ -320,10 +328,15 @@ export function SimulationForm({
             <button
               type="button"
               onClick={onApplyAiRecommendation}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#6366f1] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
+              disabled={isApplyingAiRecommendation}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#6366f1] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Sparkles className="h-4 w-4" />
-              {t.simulation.aiRecommend}
+              {isApplyingAiRecommendation ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {isApplyingAiRecommendation ? t.simulation.aiRecommendAnalyzing : t.simulation.aiRecommend}
             </button>
             <button
               type="button"

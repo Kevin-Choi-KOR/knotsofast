@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 import { useTheme } from '@/features/theme/ThemeContext'
 import { useLanguage } from '@/features/i18n/LanguageContext'
-import { SPEED_RANGE } from '@/mocks/simulation'
+import { SPEED_MAX_KNOTS, SPEED_MIN_KNOTS, SPEED_RANGE } from '@/mocks/simulation'
 import { calcFuel } from '@/shared/utils/simulation'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
@@ -63,8 +63,8 @@ export function SpeedCurveChart({
       name: 'Speed (kts)',
       nameLocation: 'middle',
       nameGap: 26,
-      min: 10,
-      max: 20,
+      min: SPEED_MIN_KNOTS,
+      max: SPEED_MAX_KNOTS,
       interval: 2,
       splitLine: { show: false },
       axisLabel: { fontSize: 11, color: c.axisLabel },

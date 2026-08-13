@@ -65,6 +65,7 @@ export default function SimulationPage() {
   const [compareVoyageId, setCompareVoyageId] = useState('')
   const [initialized, setInitialized] = useState(false)
   const [aiExplanation, setAiExplanation] = useState<AiExplanationState | null>(null)
+  const [isApplyingAiRecommendation, setIsApplyingAiRecommendation] = useState(false)
 
   useEffect(() => {
     if (initialized || voyages.length === 0) return
@@ -139,18 +140,17 @@ export default function SimulationPage() {
     setAiExplanation(null)
   }
 
-  // AI 추천: RTA(화주 확정 시) 또는 STA 마감을 하드 제약으로 두고, 항로·출발시점·속도 조합을
-  // 전수 탐색해 그 제약을 지키는 한 연료를 가장 적게 쓰는 조합을 결정론적으로 찾아 적용한다
-  // (findFuelOptimalCombination). 화물 적재율은 실제 운송 요건이라 바꾸지 않는다.
-  // 적용 직후 Gemini에게 그 조합을 고른 근거를 상세 서술로 요청해 하단 카드에 표시한다.
+  // AI 추천: RTA(화주 확정 시) 또는 STA 마감을 하드 제약으로, 출발 시점은 STD(0h)로 고정하고
+  // 항로·속도 조합을 전수 탐색해 그 제약을 지키는 한 연료를 가장 적게 쓰는 조합을 결정론적으로
+  // 찾는다(findFuelOptimalCombination). 화물 적재율은 실제 운송 요건이라 바꾸지 않는다.
+  // Gemini에게 그 조합을 고른 근거를 먼저 물어보고, 응답이 온 시점에 조건 슬라이더와 근거 카드를
+  // 한번에 반영한다 — 버튼을 누르자마자 슬라이더부터 바뀌면 AI가 아직 아무 답도 하기 전에 결과가
+  // 이미 정해진 것처럼 보이기 때문이다.
   const applyAiRecommendation = async () => {
     const candidate = findFuelOptimalCombination(selectedVoyage, selectedVessel, current, portWaitHours)
     const saving = computeSaving(planned, candidate.result)
 
-    setDepartureOffset(candidate.departureOffset)
-    setSpeedKnots(candidate.speedKnots)
-    setRoute(candidate.route)
-
+    setIsApplyingAiRecommendation(true)
     setAiExplanation({
       status: 'loading',
       feasible: candidate.feasible,
@@ -200,40 +200,42 @@ export default function SimulationPage() {
       savingVsPlan: { fuelTon: saving.fuel, costUsd: saving.cost, co2Ton: saving.co2 },
     }
 
+    let data: AiSimulationRecommendResponse
     try {
       const res = await fetch('/api/simulation/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       })
-      const data: AiSimulationRecommendResponse = await res.json()
-      if (data.ok) {
-        setAiExplanation({
-          status: 'success',
-          reasoning: data.reasoning,
-          model: data.model,
-          feasible: candidate.feasible,
-          marginHours: candidate.marginHours,
-          deadlineTerm: candidate.deadlineTerm,
-        })
-      } else {
-        setAiExplanation({
-          status: 'error',
-          reason: data.reason,
-          feasible: candidate.feasible,
-          marginHours: candidate.marginHours,
-          deadlineTerm: candidate.deadlineTerm,
-        })
-      }
+      data = await res.json()
     } catch {
+      data = { ok: false, reason: 'upstream_error' }
+    }
+
+    // AI 응답(성공이든 실패든)이 도착한 시점에 슬라이더와 근거 카드를 함께 반영한다.
+    setDepartureOffset(candidate.departureOffset)
+    setSpeedKnots(candidate.speedKnots)
+    setRoute(candidate.route)
+
+    if (data.ok) {
+      setAiExplanation({
+        status: 'success',
+        reasoning: data.reasoning,
+        model: data.model,
+        feasible: candidate.feasible,
+        marginHours: candidate.marginHours,
+        deadlineTerm: candidate.deadlineTerm,
+      })
+    } else {
       setAiExplanation({
         status: 'error',
-        reason: 'upstream_error',
+        reason: data.reason,
         feasible: candidate.feasible,
         marginHours: candidate.marginHours,
         deadlineTerm: candidate.deadlineTerm,
       })
     }
+    setIsApplyingAiRecommendation(false)
   }
 
   const downloadPdf = () => {
@@ -282,6 +284,7 @@ export default function SimulationPage() {
             onDownloadPdf={downloadPdf}
             onReset={resetToDefaults}
             onApplyAiRecommendation={applyAiRecommendation}
+            isApplyingAiRecommendation={isApplyingAiRecommendation}
           />
 
           <div className="space-y-4">

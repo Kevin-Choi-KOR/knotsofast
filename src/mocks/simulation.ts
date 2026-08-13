@@ -11,11 +11,11 @@ export const WAIT_COST_USD_PER_HOUR = 3_000
 
 export const CONGESTION_WAIT_HOURS: Record<PortCongestion, number> = { low: 0, medium: 8, high: 20, severe: 40 }
 
-// 속도 커브 차트용 — 10~20kts, 0.5 간격 21개
-export const SPEED_RANGE: number[] = Array.from({ length: 21 }, (_, i) => 10 + i * 0.5)
+// 속도 커브 차트용 — 0~20kts, 0.5 간격 41개
+export const SPEED_RANGE: number[] = Array.from({ length: 41 }, (_, i) => i * 0.5)
 
 // 슬라이더·AI 추천 탐색이 공유하는 속도/출발시점 조정 범위.
-export const SPEED_MIN_KNOTS = 10
+export const SPEED_MIN_KNOTS = 0
 export const SPEED_MAX_KNOTS = 20
 export const SPEED_STEP_KNOTS = 0.5
 export const DEPARTURE_OFFSET_MIN_H = -24
