@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
-import { Calendar, Fuel, Gauge, MapPin, Package, Ship, X } from 'lucide-react'
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react'
+import { Calendar, Fuel, FileUp, Gauge, Loader2, MapPin, Package, Ship, X } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import { Alert } from '@/shared/components/Alert'
@@ -14,6 +14,7 @@ import { resolvePortPairRoute, getPortCode } from '../lib/route'
 import { computeEtaIso, editableFieldsForStatus, isFieldEditable } from '../lib/schedule'
 import { formatDateTime } from '../lib/format'
 import { joinLocalDateTime, splitLocalDateTime, toIso, isoToLocal, type AmPm } from '../lib/dateTimeWidget'
+import { fileToBase64, type VoyagePdfParseRequest, type VoyagePdfParseResponse } from '../lib/voyagePdfParse'
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1))
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
@@ -160,12 +161,16 @@ interface VoyageModalProps {
 }
 
 export function VoyageModal({ mode, voyage, vessels, onClose, mutateVoyages }: VoyageModalProps) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [form, setForm] = useState<FormState>(() => initialForm(voyage))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [etaPreview, setEtaPreview] = useState('')
+  const [dragCounter, setDragCounter] = useState(0)
+  const [isParsingPdf, setIsParsingPdf] = useState(false)
+  const [pdfParseStatus, setPdfParseStatus] = useState<'partial' | 'error' | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isEditing = mode === 'view' && !!voyage
   const editableFields = editableFieldsForStatus(voyage?.status ?? 'preparing')
@@ -211,6 +216,78 @@ export function VoyageModal({ mode, voyage, vessels, onClose, mutateVoyages }: V
     const excluded = v.status === 'maintenance' || getFleetType(v) === 'other'
     return !excluded || v.id === voyage?.vesselId
   })
+
+  // AI 분석 자동 등록(PDF) — 선택 구현(docs/specs/SCHEDULE.md 5.14장). 등록 모드에서만 노출한다.
+  // roster는 실제 선택 가능한 선박(정비중·타사선 제외)으로 한정 — 그 밖의 선박을 매칭시키면
+  // 등록 폼의 <select>에 해당 옵션이 없어 선택값이 빈 채로 보인다.
+  async function processPdfFile(file: File) {
+    setIsParsingPdf(true)
+    setPdfParseStatus(null)
+    try {
+      const fileBase64 = await fileToBase64(file)
+      const payload: VoyagePdfParseRequest = {
+        lang,
+        fileBase64,
+        vessels: vesselOptions.map((v) => ({ id: v.id, name: v.name, imo: v.imo })),
+        ports: PORTS.map((p) => ({ code: p.code, name: p.name, nameEn: p.nameEn })),
+      }
+      const res = await fetch('/api/schedule/voyage-pdf-parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data: VoyagePdfParseResponse = await res.json()
+
+      if (!data.ok) {
+        setPdfParseStatus('error')
+        return
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        vesselId: data.vesselId || prev.vesselId,
+        departureCode: data.departurePortCode || prev.departureCode,
+        arrivalCode: data.arrivalPortCode || prev.arrivalCode,
+        etd: isoToLocal(data.etd),
+        rta: isoToLocal(data.rta),
+        sta: data.sta ? isoToLocal(data.sta) : prev.sta,
+        rtaConfirmed: data.rtaConfirmed,
+        cargoDescription: data.cargoDescription || prev.cargoDescription,
+        cargoTon: data.cargoTon > 0 ? String(data.cargoTon) : prev.cargoTon,
+        fuelType: data.fuelType,
+        plannedSpeedKnots: data.plannedSpeedKnots > 0 ? String(data.plannedSpeedKnots) : prev.plannedSpeedKnots,
+      }))
+      setErrors({})
+      setPdfParseStatus(data.status === 'partial' ? 'partial' : null)
+    } catch {
+      setPdfParseStatus('error')
+    } finally {
+      setIsParsingPdf(false)
+    }
+  }
+
+  function handleFileSelect(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) void processPdfFile(file)
+  }
+
+  // 드래그 하이라이트는 진입/이탈 카운터로 관리한다 — dragenter/dragleave만 쓰면 자식 요소를
+  // 지날 때마다 dragleave가 발생해 테두리가 깜빡인다. 카운터가 0이 될 때만 해제한다.
+  function handleDragEnter(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setDragCounter((c) => c + 1)
+  }
+  function handleDragLeave(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setDragCounter((c) => Math.max(0, c - 1))
+  }
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setDragCounter(0)
+    const file = e.dataTransfer.files?.[0]
+    if (file) void processPdfFile(file)
+  }
 
   function validate(): boolean {
     const next: Record<string, string> = {}
@@ -489,6 +566,50 @@ export function VoyageModal({ mode, voyage, vessels, onClose, mutateVoyages }: V
           {isCreate && (
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
               {t.modal.notice}
+            </div>
+          )}
+
+          {isCreate && (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <div
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                className={cn(
+                  'rounded-lg border-2 border-dashed p-4 text-center transition-colors',
+                  dragCounter > 0 ? 'border-[#6366f1] bg-[#6366f1]/5' : 'border-slate-200 dark:border-slate-700',
+                )}
+              >
+                {isParsingPdf ? (
+                  <span className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {t.modal.aiFillLoading}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-[#6366f1] dark:text-slate-400"
+                  >
+                    <FileUp className="h-3.5 w-3.5 shrink-0" />
+                    {t.modal.dragDropHint}
+                  </button>
+                )}
+              </div>
+              {pdfParseStatus === 'partial' && (
+                <p className="mt-1.5 text-xs text-yellow-600 dark:text-yellow-400">{t.modal.aiFillPartial}</p>
+              )}
+              {pdfParseStatus === 'error' && (
+                <p className="mt-1.5 text-xs text-red-500">{t.modal.aiFillFailed}</p>
+              )}
             </div>
           )}
 

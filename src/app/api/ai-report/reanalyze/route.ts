@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { GoogleGenAI, Type } from '@google/genai'
+import { Type } from '@google/genai'
 import { computeRequiredSpeedKnots } from '@/features/ai-report/lib/calculations'
 import { fetchPointWeather } from '@/features/ai-report/lib/openMeteo'
 import { normalizeLineBreaks } from '@/features/ai-report/lib/textNormalize'
 import { getPortUtcOffset, formatLocalTime } from '@/features/ai-report/lib/format'
+import { buildGeminiClient } from '@/shared/lib/gemini'
 import type { AiReanalyzeRequest, AiReanalyzeResponse } from '@/features/ai-report/lib/reanalyzeTypes'
 import type { RiskItem } from '@/shared/types'
 
@@ -129,19 +130,6 @@ Produce:
    (high/medium/low), a category (weather/port/geopolitical/mechanical), a short title, and a
    "description" of 2-3 detailed sentences -- explain both the concrete operational impact on THIS voyage
    and a specific mitigation or watch-item. Put each sentence on its own line (use \\n).`
-}
-
-function buildGeminiClient(): GoogleGenAI | null {
-  const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true'
-  if (useVertex) {
-    const project = process.env.GOOGLE_CLOUD_PROJECT
-    if (!project) return null
-    const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
-    return new GoogleGenAI({ vertexai: true, project, location })
-  }
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-  if (!apiKey) return null
-  return new GoogleGenAI({ apiKey })
 }
 
 export async function POST(request: Request) {
