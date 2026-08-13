@@ -130,10 +130,19 @@ export interface FleetGaugeCardProps {
   onToggleVoyage: (voyageId: string) => void
   onSelectAll: () => void
   onDeselectAll: () => void
+  expanded: boolean
+  onToggleExpanded: () => void
 }
 
-export function FleetGaugeCard({ rows, selectedVoyageIds, onToggleVoyage, onSelectAll, onDeselectAll }: FleetGaugeCardProps) {
-  const [expanded, setExpanded] = useState(false)
+export function FleetGaugeCard({
+  rows,
+  selectedVoyageIds,
+  onToggleVoyage,
+  onSelectAll,
+  onDeselectAll,
+  expanded,
+  onToggleExpanded,
+}: FleetGaugeCardProps) {
   const [search, setSearch] = useState('')
 
   const selectedCount = rows.filter((r) => selectedVoyageIds.has(r.voyage.id)).length
@@ -144,7 +153,7 @@ export function FleetGaugeCard({ rows, selectedVoyageIds, onToggleVoyage, onSele
       <div className="flex items-center gap-1.5">
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={onToggleExpanded}
           className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300"
         >
           <Fuel size={14} className="text-slate-400" />

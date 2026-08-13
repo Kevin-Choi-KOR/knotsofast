@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import type { Map as LeafletMap, LayerGroup, TileLayer } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { WORLD_BOUNDS } from '@/features/dashboard/mapCoords'
@@ -10,6 +10,13 @@ const ERROR_TILE_URL =
 
 const BASEMAP_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
 const SEAMARK_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'
+
+const DEFAULT_CENTER: [number, number] = [20, 100]
+const DEFAULT_ZOOM = 3
+
+export interface MapViewHandle {
+  resetView: () => void
+}
 
 // DASHBOARD.md 9.3장 — 세계지도가 반복되는 건 가로 방향뿐이다. 세로까지 맞추면
 // 화면 비율에 따라 과도한 최소 줌이 잡혀 좌우가 잘린다(KNOWN_PITFALLS.md 2.3).
@@ -21,13 +28,23 @@ function applyMinZoom(map: LeafletMap, container: HTMLDivElement) {
   if (map.getZoom() < minZoom) map.setZoom(minZoom)
 }
 
-export default function MapView() {
+const MapView = forwardRef<MapViewHandle>(function MapView(_props, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const baseLayerRef = useRef<TileLayer | null>(null)
   const voyageLayerRef = useRef<LayerGroup | null>(null)
   const portLayerRef = useRef<LayerGroup | null>(null)
   const overlayLayerRef = useRef<LayerGroup | null>(null)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      resetView: () => {
+        mapRef.current?.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: true })
+      },
+    }),
+    [],
+  )
 
   useEffect(() => {
     // StrictMode에서 effect가 두 번 실행되는 것을 막는 가드.
@@ -39,8 +56,8 @@ export default function MapView() {
       if (!active || !containerRef.current) return
 
       const map = L.map(containerRef.current, {
-        center: [20, 100],
-        zoom: 3,
+        center: DEFAULT_CENTER,
+        zoom: DEFAULT_ZOOM,
         zoomControl: true,
         maxZoom: 15,
         worldCopyJump: false,
@@ -104,4 +121,8 @@ export default function MapView() {
   }, [])
 
   return <div ref={containerRef} className="absolute inset-0" />
-}
+})
+
+MapView.displayName = 'MapView'
+
+export default MapView
