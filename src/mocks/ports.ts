@@ -49,3 +49,7 @@ export function findPort(code: string): Port | undefined {
 export function formatPortLabel(port: Port): string {
   return `${port.name} (${port.nameEn})`
 }
+
+export function getPortCode(label: string): string | undefined {
+  return PORTS.find((p) => formatPortLabel(p) === label)?.code
+}

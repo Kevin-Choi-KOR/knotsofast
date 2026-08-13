@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { useVessels } from '@/shared/hooks/useVessels'
@@ -8,6 +8,7 @@ import { useVoyages } from '@/shared/hooks/useVoyages'
 import { usePositions } from '@/shared/hooks/usePositions'
 import { computeFleetGaugeRows } from '@/features/dashboard/fleetGauge'
 import { SummaryCards } from '@/features/dashboard/SummaryCards'
+import { FleetGaugeCard } from '@/features/dashboard/FleetGaugeCard'
 
 // Leaflet은 window에 의존한다 — 반드시 SSR을 끄고 동적 import 한다(DASHBOARD.md 9.1장).
 const MapView = dynamic(() => import('@/features/dashboard/MapView'), { ssr: false })
@@ -27,6 +28,42 @@ export default function Page() {
     [vessels, voyages, positions],
   )
 
+  // DASHBOARD.md 14장 8번 — 최초 진입 시 활성 항차를 전부 선택한다. useRef 플래그로 1회만 실행해야
+  // 사용자가 해제한 선택이 데이터 갱신(polling)마다 되살아나지 않는다.
+  const didAutoSelectRef = useRef(false)
+  const [selectedVoyageIds, setSelectedVoyageIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (didAutoSelectRef.current || fleetGaugeRows.length === 0) return
+    didAutoSelectRef.current = true
+    setSelectedVoyageIds(new Set(fleetGaugeRows.map((row) => row.voyage.id)))
+  }, [fleetGaugeRows])
+
+  const toggleVoyage = (voyageId: string) => {
+    setSelectedVoyageIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(voyageId)) next.delete(voyageId)
+      else next.add(voyageId)
+      return next
+    })
+  }
+
+  const selectAllGauge = () => {
+    setSelectedVoyageIds((prev) => {
+      const next = new Set(prev)
+      fleetGaugeRows.forEach((row) => next.add(row.voyage.id))
+      return next
+    })
+  }
+
+  const deselectAllGauge = () => {
+    setSelectedVoyageIds((prev) => {
+      const next = new Set(prev)
+      fleetGaugeRows.forEach((row) => next.delete(row.voyage.id))
+      return next
+    })
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader title="실시간 운항 대시보드" subtitle="선박 위치 및 항로·해상 기상 현황" />
@@ -34,9 +71,15 @@ export default function Page() {
       {/* 상단 요약 카드 6종 */}
       <SummaryCards vessels={vessels} voyages={voyages} activeVoyages={activeVoyages} fleetGaugeRows={fleetGaugeRows} />
 
-      {/* 함대 게이지 카드 — 활성 항차 1건 이상일 때만, L1 */}
+      {/* 함대 게이지 카드 — 활성 항차 1건 이상일 때만 */}
       {activeVoyages.length > 0 && (
-        <div className="shrink-0 border-b border-slate-100 bg-white px-6 py-2 dark:border-slate-800 dark:bg-slate-800" />
+        <FleetGaugeCard
+          rows={fleetGaugeRows}
+          selectedVoyageIds={selectedVoyageIds}
+          onToggleVoyage={toggleVoyage}
+          onSelectAll={selectAllGauge}
+          onDeselectAll={deselectAllGauge}
+        />
       )}
 
       {/* 필터 바 — L2 */}
