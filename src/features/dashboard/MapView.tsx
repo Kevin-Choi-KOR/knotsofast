@@ -350,35 +350,41 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
       if (!vessel) continue
       const position = positions.find((p) => p.vesselId === voyage.vesselId)
 
-      const statusColor = VOYAGE_STATUS_COLOR[voyage.status]
-      const displayRoute = getDisplayRoute(voyage)
-      const isOwn = vessel.company === OWN_COMPANY_NAME
+      // 항차 하나의 항로·마커 계산에서 예외가 나도 나머지 항차는 계속 그린다 — try/catch가
+      // 없으면 한 항차의 잘못된 데이터가 이 루프 전체(뒤에 남은 모든 항차)를 조용히 멈춰버린다.
+      try {
+        const statusColor = VOYAGE_STATUS_COLOR[voyage.status]
+        const displayRoute = getDisplayRoute(voyage)
+        const isOwn = vessel.company === OWN_COMPANY_NAME
 
-      // 자사(My) 선박만 — 계획 항로 mouseover 시 AI 운항 리포트 요약을 툴팁으로 보여준다.
-      // 리포트가 아직 없는 항차는 조용히 건너뛴다(점선은 그대로 그려지되 툴팁만 없음).
-      const report = isOwn ? reports.find((r) => r.voyageId === voyage.id) : undefined
-      const routeTooltipHtml = report ? buildRouteReportTooltipHtml(report, labels) : null
+        // 자사(My) 선박만 — 계획 항로 mouseover 시 AI 운항 리포트 요약을 툴팁으로 보여준다.
+        // 리포트가 아직 없는 항차는 조용히 건너뛴다(점선은 그대로 그려지되 툴팁만 없음).
+        const report = isOwn ? reports.find((r) => r.voyageId === voyage.id) : undefined
+        const routeTooltipHtml = report ? buildRouteReportTooltipHtml(report, labels) : null
 
-      // ① 계획 항로 — 점선. wrapRouteSegments로 이음매를 가로지르는 구간을 선분으로 분할한다.
-      // 실제 항적(②)이 같은 구간 위에 실선으로 덧그려지므로, 이미 지나간 구간은 실선이 마우스
-      // 이벤트를 가로채 자연히 "앞으로 지나갈" 구간에서만 툴팁이 뜬다.
-      for (const segment of wrapRouteSegments(displayRoute)) {
-        const plannedLine = L.polyline(segment, { color: statusColor, weight: 2, dashArray: '8,6', opacity: 0.6 }).addTo(layerGroup)
-        if (routeTooltipHtml) plannedLine.bindTooltip(routeTooltipHtml, { sticky: true })
-      }
+        // ① 계획 항로 — 점선. wrapRouteSegments로 이음매를 가로지르는 구간을 선분으로 분할한다.
+        // 실제 항적(②)이 같은 구간 위에 실선으로 덧그려지므로, 이미 지나간 구간은 실선이 마우스
+        // 이벤트를 가로채 자연히 "앞으로 지나갈" 구간에서만 툴팁이 뜬다.
+        for (const segment of wrapRouteSegments(displayRoute)) {
+          const plannedLine = L.polyline(segment, { color: statusColor, weight: 2, dashArray: '8,6', opacity: 0.6 }).addTo(layerGroup)
+          if (routeTooltipHtml) plannedLine.bindTooltip(routeTooltipHtml, { sticky: true })
+        }
 
-      // ② 실제 항적 — 현재 AIS 위치까지 잘라낸 실선.
-      const actualRoute = getActualRoute(voyage, displayRoute, position)
-      for (const segment of wrapRouteSegments(actualRoute)) {
-        L.polyline(segment, { color: statusColor, weight: 2.5, opacity: 0.85 }).addTo(layerGroup)
-      }
+        // ② 실제 항적 — 현재 AIS 위치까지 잘라낸 실선.
+        const actualRoute = getActualRoute(voyage, displayRoute, position)
+        for (const segment of wrapRouteSegments(actualRoute)) {
+          L.polyline(segment, { color: statusColor, weight: 2.5, opacity: 0.85 }).addTo(layerGroup)
+        }
 
-      // ③ 선박 마커 — AIS 위치가 있을 때만 그린다.
-      if (position) {
-        const icon = buildVesselIcon(L, { isOwn, statusColor, cogDegrees: position.cogDegrees })
-        const marker = L.marker([position.lat, wrapLng(position.lng)], { icon })
-        marker.bindPopup(buildVesselPopupHtml(vessel, voyage, position, isOwn, statusColor, labels))
-        marker.addTo(layerGroup)
+        // ③ 선박 마커 — AIS 위치가 있을 때만 그린다.
+        if (position) {
+          const icon = buildVesselIcon(L, { isOwn, statusColor, cogDegrees: position.cogDegrees })
+          const marker = L.marker([position.lat, wrapLng(position.lng)], { icon })
+          marker.bindPopup(buildVesselPopupHtml(vessel, voyage, position, isOwn, statusColor, labels))
+          marker.addTo(layerGroup)
+        }
+      } catch (err) {
+        console.error('[MapView] failed to render voyage layer for', voyageId, err)
       }
     }
   }, [mapReady, visibleVoyageIds, vessels, voyages, positions, mapLang, reports])
