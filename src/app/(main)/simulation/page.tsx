@@ -14,11 +14,15 @@ import {
   computePlannedResult,
   computeSaving,
   computeSimulatedResult,
+  draftFactor,
+  routeDistanceOf,
 } from '@/shared/utils/simulation'
+import { interpolateFuelTonPerDay } from '@/shared/utils/format'
 import { SimulationForm } from './components/SimulationForm'
 import { SavingsCard } from './components/SavingsCard'
 import { EtaCard } from './components/EtaCard'
 import { ComparisonChart } from './components/ComparisonChart'
+import { SpeedCurveChart } from './components/SpeedCurveChart'
 
 export default function SimulationPage() {
   const { t } = useLanguage()
@@ -166,6 +170,13 @@ export default function SimulationPage() {
               portWaitCostUsd={portWaitHours * WAIT_COST_USD_PER_HOUR}
             />
             <ComparisonChart planned={planned} simulated={simulated} historical={historical} />
+            <SpeedCurveChart
+              routeDistance={routeDistanceOf(appliedVoyage, applied.route)}
+              baseFuelPerDay={interpolateFuelTonPerDay(appliedVessel.fuelCurve, 14)}
+              draftFactor={draftFactor(applied.cargoPercent)}
+              plannedSpeedKnots={appliedVoyage.plannedSpeedKnots}
+              simSpeedKnots={applied.speedKnots}
+            />
           </div>
         </div>
       </div>
