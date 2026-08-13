@@ -15,6 +15,7 @@ import {
   computeSaving,
   computeSimulatedResult,
   draftFactor,
+  findFuelOptimalCombination,
   routeDistanceOf,
 } from '@/shared/utils/simulation'
 import { interpolateFuelTonPerDay } from '@/shared/utils/format'
@@ -24,9 +25,21 @@ import { EtaCard } from './components/EtaCard'
 import { ComparisonChart } from './components/ComparisonChart'
 import { SpeedCurveChart } from './components/SpeedCurveChart'
 import { generateSimulationPdf } from './components/simulationPdf'
+import { AiRecommendationCard, type AiExplanationStatus } from './components/AiRecommendationCard'
+import type { AiSimulationRecommendFailureReason, AiSimulationRecommendRequest, AiSimulationRecommendResponse } from './components/recommendTypes'
+
+interface AiExplanationState {
+  status: AiExplanationStatus
+  reasoning?: string
+  reason?: AiSimulationRecommendFailureReason
+  model?: string
+  feasible: boolean
+  marginHours: number
+  deadlineTerm: 'RTA' | 'STA'
+}
 
 export default function SimulationPage() {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const { vessels } = useVessels()
   const { voyages } = useVoyages()
   // 대상 항차 후보: preparing·underway + 자사 선박만 (delayed·타사/파트너선 제외)
@@ -51,6 +64,7 @@ export default function SimulationPage() {
   const [berthProgress, setBerthProgress] = useState(60)
   const [compareVoyageId, setCompareVoyageId] = useState('')
   const [initialized, setInitialized] = useState(false)
+  const [aiExplanation, setAiExplanation] = useState<AiExplanationState | null>(null)
 
   useEffect(() => {
     if (initialized || voyages.length === 0) return
@@ -110,6 +124,7 @@ export default function SimulationPage() {
     setVoyageId(id)
     const nextVoyage = ownVoyages.find((v) => v.id === id)
     if (nextVoyage) setSpeedKnots(nextVoyage.plannedSpeedKnots)
+    setAiExplanation(null)
   }
 
   const resetToDefaults = () => {
@@ -121,26 +136,104 @@ export default function SimulationPage() {
     setPortCongestion('medium')
     setBerthProgress(60)
     setCompareVoyageId(defaultCompareVoyageId)
+    setAiExplanation(null)
   }
 
-  // AI 추천: 선박의 AI 권장 속도 + 표준 적재율(80%, 흘수 보정 계수가 1이 되는 기준점) +
-  // 두 항로 중 예상 비용이 더 낮은 노선을 자동 계산해 적용한다. 출발 시점은 변경하지 않는다.
-  const applyAiRecommendation = () => {
-    const recommendedSpeed = selectedVoyage.recommendedSpeedKnots
-    const recommendedCargo = 80
-    const costFor = (r: SimRoute) =>
-      computeSimulatedResult(
-        selectedVoyage,
-        selectedVessel,
-        { ...current, departureOffset: 0, speedKnots: recommendedSpeed, cargoPercent: recommendedCargo, route: r },
-        portWaitHours,
-      ).cost
-    const recommendedRoute: SimRoute = costFor('cape') < costFor('suez') ? 'cape' : 'suez'
+  // AI 추천: RTA(화주 확정 시) 또는 STA 마감을 하드 제약으로 두고, 항로·출발시점·속도 조합을
+  // 전수 탐색해 그 제약을 지키는 한 연료를 가장 적게 쓰는 조합을 결정론적으로 찾아 적용한다
+  // (findFuelOptimalCombination). 화물 적재율은 실제 운송 요건이라 바꾸지 않는다.
+  // 적용 직후 Gemini에게 그 조합을 고른 근거를 상세 서술로 요청해 하단 카드에 표시한다.
+  const applyAiRecommendation = async () => {
+    const candidate = findFuelOptimalCombination(selectedVoyage, selectedVessel, current, portWaitHours)
+    const saving = computeSaving(planned, candidate.result)
 
-    setDepartureOffset(0)
-    setSpeedKnots(recommendedSpeed)
-    setCargoPercent(recommendedCargo)
-    setRoute(recommendedRoute)
+    setDepartureOffset(candidate.departureOffset)
+    setSpeedKnots(candidate.speedKnots)
+    setRoute(candidate.route)
+
+    setAiExplanation({
+      status: 'loading',
+      feasible: candidate.feasible,
+      marginHours: candidate.marginHours,
+      deadlineTerm: candidate.deadlineTerm,
+    })
+
+    const requestBody: AiSimulationRecommendRequest = {
+      lang,
+      vessel: { name: selectedVessel.name, type: selectedVessel.type, imo: selectedVessel.imo },
+      route: {
+        departurePort: selectedVoyage.departurePort,
+        arrivalPort: selectedVoyage.arrivalPort,
+        cargoDescription: selectedVoyage.cargoDescription,
+      },
+      deadlineTerm: candidate.deadlineTerm,
+      deadlineAt: candidate.deadlineIso,
+      etdBaseAt: selectedVoyage.etd,
+      distanceNm: {
+        suez: routeDistanceOf(selectedVoyage, 'suez'),
+        cape: routeDistanceOf(selectedVoyage, 'cape'),
+      },
+      fuelCurve: selectedVessel.fuelCurve,
+      portWaitHours,
+      plan: {
+        speedKnots: selectedVoyage.plannedSpeedKnots,
+        route: current.route,
+        fuelTon: planned.fuel,
+        costUsd: planned.cost,
+        co2Ton: planned.co2,
+        etaAt: selectedVoyage.eta,
+      },
+      recommendation: {
+        route: candidate.route,
+        departureOffsetH: candidate.departureOffset,
+        speedKnots: candidate.speedKnots,
+        cargoPercent: current.cargoPercent,
+        requiredSpeedKnots: candidate.requiredSpeedKnots,
+        feasible: candidate.feasible,
+        marginHours: candidate.marginHours,
+        etdAt: candidate.result.etd.toISOString(),
+        etaAt: candidate.result.eta.toISOString(),
+        fuelTon: candidate.result.fuel,
+        costUsd: candidate.result.cost,
+        co2Ton: candidate.result.co2,
+      },
+      savingVsPlan: { fuelTon: saving.fuel, costUsd: saving.cost, co2Ton: saving.co2 },
+    }
+
+    try {
+      const res = await fetch('/api/simulation/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      })
+      const data: AiSimulationRecommendResponse = await res.json()
+      if (data.ok) {
+        setAiExplanation({
+          status: 'success',
+          reasoning: data.reasoning,
+          model: data.model,
+          feasible: candidate.feasible,
+          marginHours: candidate.marginHours,
+          deadlineTerm: candidate.deadlineTerm,
+        })
+      } else {
+        setAiExplanation({
+          status: 'error',
+          reason: data.reason,
+          feasible: candidate.feasible,
+          marginHours: candidate.marginHours,
+          deadlineTerm: candidate.deadlineTerm,
+        })
+      }
+    } catch {
+      setAiExplanation({
+        status: 'error',
+        reason: 'upstream_error',
+        feasible: candidate.feasible,
+        marginHours: candidate.marginHours,
+        deadlineTerm: candidate.deadlineTerm,
+      })
+    }
   }
 
   const downloadPdf = () => {
@@ -209,6 +302,17 @@ export default function SimulationPage() {
               plannedSpeedKnots={selectedVoyage.plannedSpeedKnots}
               simSpeedKnots={speedKnots}
             />
+            {aiExplanation && (
+              <AiRecommendationCard
+                status={aiExplanation.status}
+                reasoning={aiExplanation.reasoning}
+                reason={aiExplanation.reason}
+                model={aiExplanation.model}
+                feasible={aiExplanation.feasible}
+                marginHours={aiExplanation.marginHours}
+                deadlineTerm={aiExplanation.deadlineTerm}
+              />
+            )}
           </div>
         </div>
       </div>

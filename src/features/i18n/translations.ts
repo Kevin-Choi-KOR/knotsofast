@@ -339,8 +339,15 @@ export const ko = {
     downloadPdf: 'PDF로 다운로드',
     downloadPdfHint: '조건·결과·비교표를 담은 리포트를 PDF로 저장합니다',
     aiRecommend: 'AI 추천 시뮬레이션',
-    aiRecommendDesc: '* 선박의 AI 권장 속도, 표준 적재율(80%), 두 항로 중 예상 비용이 더 낮은 노선을 기준으로 자동 설정됩니다.',
+    aiRecommendDesc:
+      '* RTA(화주 확정 시) 또는 STA 마감을 지키는 조건 중 연료 소모가 가장 적은 출발 시점·속도·항로 조합을 자동으로 찾아 적용합니다. 화물 적재율은 변경하지 않습니다.',
     reset: '초기화',
+    aiExplanationTitle: 'Gemini 추천 근거',
+    aiExplanationLoading: 'Gemini 2.5 Pro가 추천 근거를 분석하는 중입니다...',
+    aiExplanationNoApiKey: 'Gemini API 키가 설정되지 않아 근거 설명을 생성할 수 없습니다. 위 추천 조건 자체는 정상 적용되었습니다.',
+    aiExplanationFailed: 'Gemini 근거 설명 생성에 실패했습니다. 위 추천 조건 자체는 정상 적용되었습니다.',
+    deadlineMet: (term: string, h: string): string => `${term} 준수 · 여유 ${h}h`,
+    deadlineMissed: (term: string, h: string): string => `${term} 미준수 · ${h}h 초과`,
   },
   users: {
     title: '사용자 관리',
@@ -797,8 +804,14 @@ export const en: Translations = {
     downloadPdfHint: 'Save a report with conditions, results and comparison as PDF',
     aiRecommend: 'AI Recommended Simulation',
     aiRecommendDesc:
-      "* Automatically set using the vessel's AI-recommended speed, standard cargo load (80%), and whichever route has the lower estimated cost.",
+      '* Automatically finds and applies the departure timing, speed and route combination with the lowest fuel burn that still meets the RTA (if confirmed) or STA deadline. Cargo load is left unchanged.',
     reset: 'Reset',
+    aiExplanationTitle: 'Gemini Recommendation Rationale',
+    aiExplanationLoading: 'Gemini 2.5 Pro is analyzing the rationale for this recommendation...',
+    aiExplanationNoApiKey: 'Gemini API key is not configured, so the rationale could not be generated. The recommended conditions above were still applied.',
+    aiExplanationFailed: 'Failed to generate the Gemini rationale. The recommended conditions above were still applied.',
+    deadlineMet: (term: string, h: string): string => `${term} met · ${h}h margin`,
+    deadlineMissed: (term: string, h: string): string => `${term} missed · ${h}h over`,
   },
   users: {
     title: 'User Management',
