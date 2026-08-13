@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  AlertCircle,
   AlertTriangle,
   Anchor,
   ArrowRight,
@@ -135,9 +136,22 @@ interface ReportCardProps {
   position?: AisPosition
   expanded: boolean
   onToggle: () => void
+  isReanalyzing: boolean
+  reanalyzeError?: 'bad_request' | 'no_api_key' | 'upstream_error'
+  onReanalyze: () => void
 }
 
-export function ReportCard({ vessel, voyage, report, position, expanded, onToggle }: ReportCardProps) {
+export function ReportCard({
+  vessel,
+  voyage,
+  report,
+  position,
+  expanded,
+  onToggle,
+  isReanalyzing,
+  reanalyzeError,
+  onReanalyze,
+}: ReportCardProps) {
   const { t } = useLanguage()
   const view = useReportView(vessel, voyage, report, position)
 
@@ -212,11 +226,14 @@ export function ReportCard({ vessel, voyage, report, position, expanded, onToggl
         <Button
           variant="secondary"
           size="sm"
-          disabled
-          onClick={(e) => e.stopPropagation()}
+          disabled={isReanalyzing}
+          onClick={(e) => {
+            e.stopPropagation()
+            onReanalyze()
+          }}
           className="hidden shrink-0 items-center gap-1.5 md:flex"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
+          <RefreshCw className={cn('h-3.5 w-3.5', isReanalyzing && 'animate-spin')} />
           {t.aiReport.reanalyze}
         </Button>
 
@@ -229,13 +246,20 @@ export function ReportCard({ vessel, voyage, report, position, expanded, onToggl
 
       {expanded && (
         <div className="space-y-5 border-t border-slate-100 px-4 pb-4 dark:border-slate-800">
+          {isReanalyzing && (
+            <Alert variant="info" className="flex items-center gap-2 pt-4">
+              <RefreshCw className="h-4 w-4 shrink-0 animate-spin" />
+              {t.aiReport.aiAnalyzingBanner}
+            </Alert>
+          )}
+
           {!voyage.rtaConfirmed && (
-            <Alert variant="warning" className="pt-4">
+            <Alert variant="warning" className={isReanalyzing ? undefined : 'pt-4'}>
               {t.aiReport.rtaUnconfirmedNotice}
             </Alert>
           )}
 
-          <div className={voyage.rtaConfirmed ? 'pt-4' : undefined}>
+          <div className={voyage.rtaConfirmed && !isReanalyzing ? 'pt-4' : undefined}>
             <VoyageProgressLine
               totalDistanceNm={voyage.distanceNm}
               traveledNm={view.progress.traveledNm}
@@ -459,6 +483,12 @@ export function ReportCard({ vessel, voyage, report, position, expanded, onToggl
                 </>
               )}
             </div>
+            {reanalyzeError && (
+              <div className="mt-2 flex items-start gap-1.5 text-sm text-yellow-700 dark:text-yellow-400">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                {reanalyzeError === 'no_api_key' ? t.aiReport.aiApiKeyMissing : t.aiReport.aiReanalyzeFailed}
+              </div>
+            )}
             <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-600 dark:text-slate-300">
               {report.reasoning
                 .split('\n')
