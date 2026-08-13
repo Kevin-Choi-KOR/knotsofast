@@ -234,10 +234,17 @@ export default function CarbonPage() {
           onClose={() => setCertOpen(false)}
           voyageId={selectedVoyage.id}
           vesselName={selectedVessel.name}
+          vesselImo={selectedVessel.imo}
+          vesselFlag={selectedVessel.flag}
           departurePort={selectedVoyage.departurePort}
           arrivalPort={selectedVoyage.arrivalPort}
           distanceNm={selectedVoyage.distanceNm}
           cargoDescription={selectedVoyage.cargoDescription}
+          cargoTon={selectedVoyage.cargoTon}
+          fuelType={selectedVoyage.fuelType}
+          etd={selectedVoyage.etd}
+          eta={selectedVoyage.eta}
+          totalCo2Ton={current.totalCo2Ton}
           savedTon={scope3.savedTon}
           savedPct={scope3.savedPct}
         />
