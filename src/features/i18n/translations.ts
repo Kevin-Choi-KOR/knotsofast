@@ -336,6 +336,9 @@ export const ko = {
     historicalLabel: '기존 항차 실적',
     downloadPdf: 'PDF로 다운로드',
     downloadPdfHint: '조건·결과·비교표를 담은 리포트를 PDF로 저장합니다',
+    aiRecommend: 'AI 추천 시뮬레이션',
+    aiRecommendDesc: '* 선박의 AI 권장 속도, 표준 적재율(80%), 두 항로 중 예상 비용이 더 낮은 노선을 기준으로 자동 설정됩니다.',
+    reset: '초기화',
   },
   users: {
     title: '사용자 관리',
@@ -788,6 +791,10 @@ export const en: Translations = {
     historicalLabel: 'Historical Voyage',
     downloadPdf: 'Download PDF',
     downloadPdfHint: 'Save a report with conditions, results and comparison as PDF',
+    aiRecommend: 'AI Recommended Simulation',
+    aiRecommendDesc:
+      "* Automatically set using the vessel's AI-recommended speed, standard cargo load (80%), and whichever route has the lower estimated cost.",
+    reset: 'Reset',
   },
   users: {
     title: 'User Management',

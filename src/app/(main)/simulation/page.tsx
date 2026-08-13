@@ -99,6 +99,40 @@ export default function SimulationPage() {
   const historical = compareVoyage && compareVessel ? computeHistoricalResult(compareVoyage, compareVessel) : null
   const saving = computeSaving(planned, simulated)
 
+  const defaultVoyageId = ownVoyages[0]?.id ?? ''
+  const defaultCompareVoyageId = completedVoyages[0]?.id ?? ''
+
+  const resetToDefaults = () => {
+    setVoyageId(defaultVoyageId)
+    setDepartureOffset(0)
+    setSpeedKnots(14)
+    setCargoPercent(80)
+    setRoute('suez')
+    setPortCongestion('medium')
+    setBerthProgress(60)
+    setCompareVoyageId(defaultCompareVoyageId)
+  }
+
+  // AI 추천: 선박의 AI 권장 속도 + 표준 적재율(80%, 흘수 보정 계수가 1이 되는 기준점) +
+  // 두 항로 중 예상 비용이 더 낮은 노선을 자동 계산해 적용한다. 출발 시점은 변경하지 않는다.
+  const applyAiRecommendation = () => {
+    const recommendedSpeed = selectedVoyage.recommendedSpeedKnots
+    const recommendedCargo = 80
+    const costFor = (r: SimRoute) =>
+      computeSimulatedResult(
+        selectedVoyage,
+        selectedVessel,
+        { ...current, departureOffset: 0, speedKnots: recommendedSpeed, cargoPercent: recommendedCargo, route: r },
+        portWaitHours,
+      ).cost
+    const recommendedRoute: SimRoute = costFor('cape') < costFor('suez') ? 'cape' : 'suez'
+
+    setDepartureOffset(0)
+    setSpeedKnots(recommendedSpeed)
+    setCargoPercent(recommendedCargo)
+    setRoute(recommendedRoute)
+  }
+
   const downloadPdf = () => {
     const doc = generateSimulationPdf({
       voyage: selectedVoyage,
@@ -143,6 +177,8 @@ export default function SimulationPage() {
             compareVoyageId={compareVoyageId}
             onCompareVoyageIdChange={setCompareVoyageId}
             onDownloadPdf={downloadPdf}
+            onReset={resetToDefaults}
+            onApplyAiRecommendation={applyAiRecommendation}
           />
 
           <div className="space-y-4">
