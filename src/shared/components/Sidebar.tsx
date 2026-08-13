@@ -145,7 +145,15 @@ function Logo({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () =
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#6366f1]">
         <Ship className="h-4 w-4 text-white" />
       </span>
-      {!collapsed && <span className="text-sm font-bold whitespace-nowrap">KNOT SO FAST</span>}
+      {!collapsed && (
+        <span className="flex flex-col leading-tight">
+          <span className="text-sm font-bold whitespace-nowrap">KNOT SO FAST</span>
+          <span className="text-[10px] font-bold whitespace-nowrap text-slate-400 dark:text-slate-500">
+            MOVE <span className="text-[#FFE000]">A</span>
+            <span className="text-[#0086FF]">I</span> CHALLENGE 2026
+          </span>
+        </span>
+      )}
     </Link>
   )
 }
