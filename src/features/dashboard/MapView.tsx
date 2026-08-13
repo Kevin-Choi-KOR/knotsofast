@@ -521,11 +521,14 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
             setLegendOpen((v) => !v)
           }
         }}
-        className="absolute bottom-4 left-4 z-10 w-52 cursor-pointer rounded-xl bg-white p-3 text-xs shadow-lg dark:bg-slate-800"
+        className={cn(
+          'absolute bottom-4 left-4 z-10 cursor-pointer rounded-xl bg-white p-3 text-xs shadow-lg dark:bg-slate-800',
+          legendOpen ? 'w-52' : 'w-auto',
+        )}
       >
         <div className="flex items-center gap-1.5">
-          <span className="flex-1 font-semibold text-slate-700 dark:text-slate-200">선박 상태</span>
-          <ChevronDown size={14} className={cn('shrink-0 transition-transform', !legendOpen && '-rotate-90')} />
+          <span className="flex-1 font-semibold whitespace-nowrap text-slate-700 dark:text-slate-200">선박 상태</span>
+          {legendOpen && <ChevronDown size={14} className="shrink-0 transition-transform" />}
         </div>
 
         {legendOpen && (

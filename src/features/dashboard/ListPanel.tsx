@@ -230,11 +230,13 @@ function PortSection({ portAggregates, onFocusPort }: PortSectionProps) {
             onClick={() => onFocusPort(code)}
             className="flex shrink-0 flex-col items-start rounded-lg border border-slate-200 bg-white px-2 py-1 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
           >
-            <span className="text-xs text-slate-900 dark:text-slate-100">
+            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
               {port.name} ({code})
             </span>
-            <span className="text-[10px] text-slate-500 dark:text-slate-400">
-              정박 {agg.berthed.length} · 출항 {agg.departing.length} · 입항예정 {agg.arriving.length}
+            <span className="flex items-center gap-2 text-[10px] font-medium">
+              <span className="text-green-600 dark:text-green-400">정박 {agg.berthed.length}</span>
+              <span className="text-amber-600 dark:text-amber-400">출항 {agg.departing.length}</span>
+              <span className="text-[#6366f1]">입항예정 {agg.arriving.length}</span>
             </span>
           </button>
         ))}

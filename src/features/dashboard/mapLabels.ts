@@ -1,10 +1,14 @@
 import type { TyphoonWarning } from '@/mocks/map-overlays'
+import type { Port } from '@/mocks/ports'
 import type { VoyageStatus } from '@/shared/types'
 
 // DASHBOARD.md 12장 끝 — 지도 팝업 전용 사전. 앱 전역 언어(사이드바·헤더)와 별개로 4개 언어를 가진다.
 export type MapLang = 'ko' | 'en' | 'zh' | 'ja'
 
 export interface MapLabels {
+  // 항구명 표시 — ko는 "한글명 (영문명)", 그 외 언어는 중국어·일본어 항구명 데이터가 없어
+  // 영문명만 보여준다(한글이 섞여 나오면 언어를 바꿔도 안 바뀐 것처럼 보인다).
+  portTitle: (port: Port) => string
   ownFleet: string
   voyage: string
   currentSpeed: string
@@ -116,6 +120,7 @@ const TYPHOON_JA: Record<TyphoonWarning['intensity'], string> = {
 
 export const MAP_LABELS: Record<MapLang, MapLabels> = {
   ko: {
+    portTitle: (port) => `${port.name} (${port.nameEn})`,
     ownFleet: '자사 선박',
     voyage: '항차',
     currentSpeed: '현재 속도',
@@ -152,6 +157,7 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     formatDateTime: makeDateTimeFormatter('ko-KR'),
   },
   en: {
+    portTitle: (port) => port.nameEn,
     ownFleet: 'Our Fleet',
     voyage: 'Voyage',
     currentSpeed: 'Current Speed',
@@ -188,6 +194,7 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     formatDateTime: makeDateTimeFormatter('en-US'),
   },
   zh: {
+    portTitle: (port) => port.nameEn,
     ownFleet: '自有船舶',
     voyage: '航次',
     currentSpeed: '当前航速',
@@ -224,6 +231,7 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     formatDateTime: makeDateTimeFormatter('zh-CN'),
   },
   ja: {
+    portTitle: (port) => port.nameEn,
     ownFleet: '自社船',
     voyage: '航海',
     currentSpeed: '現在速度',

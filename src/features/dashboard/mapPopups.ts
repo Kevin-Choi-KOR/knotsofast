@@ -1,5 +1,5 @@
 import { OWN_COMPANY_NAME } from '@/shared/constants'
-import { formatPortLabel, getPortCode, type Port } from '@/mocks/ports'
+import { getPortCode, type Port } from '@/mocks/ports'
 import type { RegionalIssue, TyphoonWarning } from '@/mocks/map-overlays'
 import type { PortAggregate, PortVesselEntry } from '@/features/dashboard/portAggregation'
 import type { MapLabels } from '@/features/dashboard/mapLabels'
@@ -74,7 +74,7 @@ export function buildPortPopupHtml(port: Port, agg: PortAggregate | undefined, l
         ].join('')
 
   return `<div style="width:240px;max-height:240px;overflow-y:auto;">
-    <div style="font-size:14px;font-weight:700;">${escapeHtml(formatPortLabel(port))}</div>
+    <div style="font-size:14px;font-weight:700;">${escapeHtml(labels.portTitle(port))}</div>
     <div style="font-size:10px;color:#94a3b8;">${port.code}</div>
     ${body}
   </div>`
