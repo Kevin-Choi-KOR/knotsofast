@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  AlertTriangle,
   Anchor,
   ArrowRight,
   CalendarCheck,
@@ -9,11 +10,14 @@ import {
   ChevronUp,
   FileDown,
   Fuel,
+  Info,
   Leaf,
+  MapPin,
   Minus,
   Navigation,
   RadioTower,
   RefreshCw,
+  Shield,
   Ship,
   ShieldAlert,
   ShieldCheck,
@@ -21,21 +25,32 @@ import {
   Timer,
   TrendingDown,
   TrendingUp,
+  Wind,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import type { Translations } from '@/features/i18n/translations'
-import type { Vessel, Voyage, EcoSpeedReport, AisPosition } from '@/shared/types'
+import type { Vessel, Voyage, EcoSpeedReport, AisPosition, RiskItem } from '@/shared/types'
 import type { CongestionLevel, CongestionTrend } from '@/mocks/port-congestion'
 import { Alert } from '@/shared/components/Alert'
 import { Button } from '@/shared/components/Button'
 import { Card } from '@/shared/components/Card'
+import { RiskBadge } from '@/shared/components/StatusBadge'
 import { useReportView } from '../hooks/useReportView'
 import { VoyageProgressLine } from './VoyageProgressLine'
 import { ProbabilityGauge } from './ProbabilityGauge'
 import { StatCard, type StatCardAccent } from './StatCard'
 import { ReportWeatherStats } from './ReportWeatherStats'
-import { formatDecimal, formatInt, formatLocalTime, formatSavingValue, portFirstToken, getPortUtcOffset } from '../lib/format'
+import {
+  formatDecimal,
+  formatInt,
+  formatLocalTime,
+  formatLocalTimeNatural,
+  formatSavingValue,
+  portFirstToken,
+  getPortUtcOffset,
+} from '../lib/format'
 import type { Confidence } from '../lib/calculations'
 
 const VESSEL_TYPE_KEY = {
@@ -85,6 +100,27 @@ const TREND_LABEL_KEY: Record<CongestionTrend, 'trendRising' | 'trendStable' | '
 
 function savingLabels(t: Translations) {
   return { saved: t.aiReport.savingSuffix, increase: t.aiReport.increaseSuffix }
+}
+
+const RISK_CATEGORY_ICON = { weather: Wind, port: Anchor, geopolitical: Shield, mechanical: Wrench } as const
+
+const RISK_CATEGORY_LABEL_KEY = {
+  weather: 'catWeather',
+  port: 'catPort',
+  geopolitical: 'catGeopolitical',
+  mechanical: 'catMechanical',
+} as const
+
+const RISK_LEVEL_ICON_CLASS: Record<RiskItem['level'], string> = {
+  high: 'text-red-500',
+  medium: 'text-yellow-500',
+  low: 'text-[#6366f1]',
+}
+
+const RISK_LEVEL_BORDER_CLASS: Record<RiskItem['level'], string> = {
+  high: 'border-red-200 dark:border-red-900/40',
+  medium: 'border-yellow-200 dark:border-yellow-900/40',
+  low: 'border-slate-200 dark:border-slate-700',
 }
 
 /** 6.9장: increase(증가)면 danger로 강조하고, 절감일 때만 원래 accent(brand/success)를 쓴다. */
@@ -406,6 +442,93 @@ export function ReportCard({ vessel, voyage, report, position, expanded, onToggl
               currentLabel={t.aiReport.currentAreaWeather}
               arrivalLabel={t.aiReport.arrivalPortWeather}
             />
+          </div>
+
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t.aiReport.reasoning}</h3>
+              {report.aiAnalyzedAt && (
+                <>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#6366f1]/10 px-2 py-0.5 text-xs font-medium text-[#6366f1]">
+                    <Sparkles className="h-3 w-3" />
+                    {t.aiReport.aiGeneratedBadge}
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {t.aiReport.aiAnalyzedAtLabel}: {formatLocalTimeNatural(report.aiAnalyzedAt, arrivalOffset)}
+                  </span>
+                </>
+              )}
+            </div>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-600 dark:text-slate-300">
+              {report.reasoning
+                .split('\n')
+                .filter((line) => line.trim().length > 0)
+                .map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t.aiReport.risks}</h3>
+            <div className="mt-2 space-y-2">
+              {report.risks.map((risk, i) => {
+                const RiskIcon = risk.level === 'low' ? Info : AlertTriangle
+                const CategoryIcon = RISK_CATEGORY_ICON[risk.category]
+                return (
+                  <div
+                    key={i}
+                    className={cn('rounded-lg border p-3', RISK_LEVEL_BORDER_CLASS[risk.level])}
+                  >
+                    <div className="flex items-start gap-2">
+                      <RiskIcon className={cn('mt-0.5 h-4 w-4 shrink-0', RISK_LEVEL_ICON_CLASS[risk.level])} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">{risk.title}</span>
+                          <RiskBadge level={risk.level} />
+                          <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                            <CategoryIcon className="h-3 w-3" />
+                            {t.aiReport[RISK_CATEGORY_LABEL_KEY[risk.category]]}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm whitespace-pre-line text-slate-600 dark:text-slate-300">
+                          {risk.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {t.aiReport.regionalIssuesTitle}
+            </h3>
+            {view.issues.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.aiReport.noNearbyIssues}</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {view.issues.map((issue) => (
+                  <div key={issue.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">{issue.title}</span>
+                          <RiskBadge level={issue.severity} />
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{issue.description}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {t.aiReport.source}: {issue.source}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
