@@ -21,17 +21,9 @@ import { ciiGradeFromScore, CII_COLORS, formatSignedPct } from '@/shared/utils/c
 import { CARBON_BENCHMARK_MULTIPLIER, MOCK_CII_SCORE_BY_VOYAGE } from '@/mocks/carbon'
 import { computeEcoRanking } from '@/features/dashboard/ecoRanking'
 import type { FleetGaugeRow } from '@/features/dashboard/fleetGauge'
+import { VOYAGE_STATUS_COLOR } from '@/features/dashboard/statusColors'
 
 const CARD_CLASS = 'rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800'
-
-// DASHBOARD.md 13장 — 항차 상태 마커 색(지도·캘린더·게이지 공통)
-const STATUS_COLORS: Record<Voyage['status'], string> = {
-  underway: '#3b82f6',
-  delayed: '#ef4444',
-  preparing: '#94a3b8',
-  completed: '#22c55e',
-  cancelled: '#64748b',
-}
 
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -250,7 +242,7 @@ function WeeklyScheduleCard({ vessels, voyages }: WeeklyScheduleCardProps) {
               )}
               <span className="flex h-1 items-center justify-center gap-0.5">
                 {shownEvents.map((e, i) => (
-                  <span key={i} className="h-1 w-1 rounded-full" style={{ backgroundColor: STATUS_COLORS[e.status] }} />
+                  <span key={i} className="h-1 w-1 rounded-full" style={{ backgroundColor: VOYAGE_STATUS_COLOR[e.status] }} />
                 ))}
               </span>
             </button>

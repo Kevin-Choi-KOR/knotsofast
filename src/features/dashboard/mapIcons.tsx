@@ -65,6 +65,26 @@ export function buildIssueIcon(L: typeof Leaflet, type: RegionalIssue['type']): 
   return L.divIcon({ html, className: '', iconSize: [36, 36], iconAnchor: [18, 18] })
 }
 
+// DASHBOARD.md 9.7장 ③ — 선체 실루엣 SVG. 기상·이슈의 원형 배지와 "형태"로 구분하고,
+// 자사/타사는 점선이 아니라 "채움 진하기"로 구분한다(점선은 태풍·위험구역 반경에 이미 쓰임).
+export function buildVesselIcon(
+  L: typeof Leaflet,
+  params: { isOwn: boolean; statusColor: string; cogDegrees: number },
+): Leaflet.DivIcon {
+  const size = params.isOwn ? 34 : 28
+  const fillOpacity = params.isOwn ? 1 : 0.4
+  const stroke = params.isOwn ? '#ffffff' : params.statusColor
+  const strokeWidth = params.isOwn ? 2 : 1.5
+  const circleOpacity = params.isOwn ? 0.9 : 0.7
+
+  const html = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="transform:rotate(${params.cogDegrees}deg);filter:drop-shadow(0 2px 3px rgba(15,23,42,0.4));">
+    <path d="M12 1.5 L17 9 L15 21.5 L9 21.5 L7 9 Z" fill="${params.statusColor}" fill-opacity="${fillOpacity}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+    <circle cx="12" cy="9.5" r="1.6" fill="white" opacity="${circleOpacity}" />
+  </svg>`
+
+  return L.divIcon({ html, className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2] })
+}
+
 function windColor(speedMs: number): string {
   if (speedMs >= 15) return '#ef4444'
   if (speedMs >= 10) return '#f59e0b'

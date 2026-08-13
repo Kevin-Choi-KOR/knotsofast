@@ -159,7 +159,9 @@ export interface WeatherPoint {
   waveHeight: number // m
 }
 
-const WEATHER_LOCATIONS: { name: string; lat: number; lng: number }[] = [
+// DASHBOARD.md 3.5장 — Open-Meteo 실시간 조회(11.1장) 대상 8지점. 좌표만 정적이고,
+// 풍속·풍향·파고 값은 useMarineWeather가 실시간으로 채운다.
+export const WEATHER_LOCATIONS: { name: string; lat: number; lng: number }[] = [
   { name: '아라비아해', lat: 15, lng: 65 },
   { name: '말라카 해협', lat: 3, lng: 104 },
   { name: '남중국해', lat: 12, lng: 118 },
@@ -169,17 +171,3 @@ const WEATHER_LOCATIONS: { name: string; lat: number; lng: number }[] = [
   { name: '희망봉', lat: -35, lng: 20 },
   { name: '북대서양', lat: 45, lng: -30 },
 ]
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * (max - min)
-}
-
-// DASHBOARD.md 3.5장 — Open-Meteo 실시간 API(11.1장, L4)를 붙이기 전까지 쓰는 폴백.
-export function generateMockWeatherPoints(): WeatherPoint[] {
-  return WEATHER_LOCATIONS.map((loc) => ({
-    ...loc,
-    windSpeed: randomBetween(3, 18),
-    windDir: randomBetween(0, 360),
-    waveHeight: randomBetween(0.5, 4.5),
-  }))
-}

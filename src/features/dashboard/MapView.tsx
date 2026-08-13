@@ -1,18 +1,32 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Map as LeafletMap, LayerGroup, Marker, TileLayer } from 'leaflet'
 import { Anchor, ChevronDown, Satellite, Ship } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
 import { cn } from '@/shared/utils/cn'
 import { PORTS } from '@/mocks/ports'
-import { MOCK_DANGER_ZONES, MOCK_REGIONAL_ISSUES, generateMockWeatherPoints, type TyphoonWarning } from '@/mocks/map-overlays'
-import { WORLD_BOUNDS, wrapLng } from '@/features/dashboard/mapCoords'
-import { buildIssueIcon, buildPortIcon, buildTyphoonIcon, buildWeatherIcon, TYPHOON_INTENSITY_COLOR } from '@/features/dashboard/mapIcons'
-import { buildIssuePopupHtml, buildPortPopupHtml, buildTyphoonPopupHtml } from '@/features/dashboard/mapPopups'
+import { MOCK_DANGER_ZONES, MOCK_REGIONAL_ISSUES } from '@/mocks/map-overlays'
+import { WORLD_BOUNDS, wrapLng, wrapRouteSegments } from '@/features/dashboard/mapCoords'
+import {
+  buildIssueIcon,
+  buildPortIcon,
+  buildTyphoonIcon,
+  buildVesselIcon,
+  buildWeatherIcon,
+  TYPHOON_INTENSITY_COLOR,
+} from '@/features/dashboard/mapIcons'
+import { buildIssuePopupHtml, buildPortPopupHtml, buildTyphoonPopupHtml, buildVesselPopupHtml } from '@/features/dashboard/mapPopups'
 import { MAP_LABELS, type MapLang } from '@/features/dashboard/mapLabels'
+import { useMarineWeather } from '@/features/dashboard/useMarineWeather'
+import { useTyphoons } from '@/features/dashboard/useTyphoons'
+import { useRadarTileUrl } from '@/features/dashboard/useRadarTileUrl'
+import { getActualRoute, getDisplayRoute } from '@/features/dashboard/voyageRoute'
+import { VOYAGE_STATUS_COLOR } from '@/features/dashboard/statusColors'
+import { OWN_COMPANY_NAME } from '@/shared/constants'
 import type { MapLayers } from '@/features/dashboard/filters'
 import type { PortAggregate } from '@/features/dashboard/portAggregation'
+import type { AisPosition, Vessel, Voyage } from '@/shared/types'
 
 const ERROR_TILE_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
@@ -23,10 +37,6 @@ const SEAMARK_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'
 
 const DEFAULT_CENTER: [number, number] = [20, 100]
 const DEFAULT_ZOOM = 3
-
-// DASHBOARD.md 3.4장 — 태풍은 목업을 두지 않는다. GDACS 실시간 API(11.2장, L4)가 붙기 전까지는
-// 항상 빈 배열이며, 태풍 레이어에는 아무것도 그려지지 않는 것이 정상이다.
-const NO_TYPHOONS: TyphoonWarning[] = []
 
 // DASHBOARD.md 9.10장 ①.
 const LANG_OPTIONS: { value: MapLang; label: string; title: string }[] = [
@@ -60,6 +70,10 @@ export interface MapFocusTarget {
 }
 
 export interface MapViewProps {
+  vessels: Vessel[]
+  voyages: Voyage[]
+  positions: AisPosition[]
+  visibleVoyageIds: Set<string> // 9.7장 — 비어 있으면 아무것도 그리지 않는다(7.6장에서 확정된 최종 집합)
   portAggregates: Map<string, PortAggregate> // 9.6장 — page.tsx에서 한 번만 계산해 지도·리스트가 공유
   layers: MapLayers
   focusTarget?: MapFocusTarget
@@ -75,11 +89,12 @@ function applyMinZoom(map: LeafletMap, container: HTMLDivElement) {
   if (map.getZoom() < minZoom) map.setZoom(minZoom)
 }
 
-function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
+function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates, layers, focusTarget }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const leafletModuleRef = useRef<typeof import('leaflet') | null>(null)
   const baseLayerRef = useRef<TileLayer | null>(null)
+  const radarLayerRef = useRef<TileLayer | null>(null)
   const voyageLayerRef = useRef<LayerGroup | null>(null)
   const portLayerRef = useRef<LayerGroup | null>(null)
   const overlayLayerRef = useRef<LayerGroup | null>(null)
@@ -93,7 +108,10 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
   const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard')
   const [legendOpen, setLegendOpen] = useState(false)
 
-  const weatherPoints = useMemo(() => generateMockWeatherPoints(), [])
+  // DASHBOARD.md 11장 — 외부 API. 전부 실패해도 화면은 그대로 동작한다(개별 훅이 빈 배열/null로 폴백).
+  const { points: weatherPoints } = useMarineWeather()
+  const typhoons = useTyphoons()
+  const radarUrl = useRadarTileUrl()
 
   useEffect(() => {
     // StrictMode에서 effect가 두 번 실행되는 것을 막는 가드.
@@ -170,6 +188,7 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
       mapRef.current = null
       leafletModuleRef.current = null
       baseLayerRef.current = null
+      radarLayerRef.current = null
       voyageLayerRef.current = null
       portLayerRef.current = null
       overlayLayerRef.current = null
@@ -183,6 +202,29 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
     if (!mapReady || !baseLayerRef.current) return
     baseLayerRef.current.setUrl(mapType === 'satellite' ? SATELLITE_URL : BASEMAP_URL)
   }, [mapReady, mapType])
+
+  // DASHBOARD.md 11.3장 — RainViewer 강수 레이더. layers.radar가 꺼지면 레이어를 제거한다.
+  // 실패(radarUrl이 끝내 null)는 조용히 무시한다 — 레이어가 그냥 안 뜬다.
+  useEffect(() => {
+    const L = leafletModuleRef.current
+    const map = mapRef.current
+    if (!mapReady || !L || !map) return
+
+    if (layers.radar && radarUrl) {
+      if (radarLayerRef.current) {
+        radarLayerRef.current.setUrl(radarUrl)
+      } else {
+        radarLayerRef.current = L.tileLayer(radarUrl, {
+          opacity: 0.45,
+          maxZoom: 10,
+          errorTileUrl: ERROR_TILE_URL,
+        }).addTo(map)
+      }
+    } else if (radarLayerRef.current) {
+      radarLayerRef.current.remove()
+      radarLayerRef.current = null
+    }
+  }, [mapReady, layers.radar, radarUrl])
 
   // DASHBOARD.md 9.6장 — 항구 레이어. layers.ports가 꺼지면 아무것도 그리지 않는다.
   // effect는 항상 clearLayers()로 비운 뒤 다시 그린다(9.5장).
@@ -206,6 +248,50 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
       portMarkersRef.current.set(port.code, marker)
     }
   }, [mapReady, portAggregates, layers.ports, mapLang])
+
+  // DASHBOARD.md 9.7장 — 항차 레이어(항로 + 선박 마커). visibleVoyageIds가 비어 있으면
+  // 아무것도 그리지 않는다. effect는 항상 clearLayers()로 비운 뒤 다시 그린다(9.5장).
+  useEffect(() => {
+    const L = leafletModuleRef.current
+    const layerGroup = voyageLayerRef.current
+    if (!mapReady || !L || !layerGroup) return
+
+    layerGroup.clearLayers()
+    if (visibleVoyageIds.size === 0) return
+
+    const labels = MAP_LABELS[mapLang]
+
+    for (const voyageId of visibleVoyageIds) {
+      const voyage = voyages.find((v) => v.id === voyageId)
+      if (!voyage) continue
+      const vessel = vessels.find((v) => v.id === voyage.vesselId)
+      if (!vessel) continue
+      const position = positions.find((p) => p.vesselId === voyage.vesselId)
+
+      const statusColor = VOYAGE_STATUS_COLOR[voyage.status]
+      const displayRoute = getDisplayRoute(voyage)
+
+      // ① 계획 항로 — 점선. wrapRouteSegments로 이음매를 가로지르는 구간을 선분으로 분할한다.
+      for (const segment of wrapRouteSegments(displayRoute)) {
+        L.polyline(segment, { color: statusColor, weight: 2, dashArray: '8,6', opacity: 0.6 }).addTo(layerGroup)
+      }
+
+      // ② 실제 항적 — 현재 AIS 위치까지 잘라낸 실선.
+      const actualRoute = getActualRoute(voyage, displayRoute, position)
+      for (const segment of wrapRouteSegments(actualRoute)) {
+        L.polyline(segment, { color: statusColor, weight: 2.5, opacity: 0.85 }).addTo(layerGroup)
+      }
+
+      // ③ 선박 마커 — AIS 위치가 있을 때만 그린다.
+      if (position) {
+        const isOwn = vessel.company === OWN_COMPANY_NAME
+        const icon = buildVesselIcon(L, { isOwn, statusColor, cogDegrees: position.cogDegrees })
+        const marker = L.marker([position.lat, wrapLng(position.lng)], { icon })
+        marker.bindPopup(buildVesselPopupHtml(vessel, voyage, position, isOwn, statusColor, labels))
+        marker.addTo(layerGroup)
+      }
+    }
+  }, [mapReady, visibleVoyageIds, vessels, voyages, positions, mapLang])
 
   // DASHBOARD.md 9.8장 — 오버레이 레이어(위험구역·태풍·지역 이슈·기상). 카테고리별로 layers
   // 플래그를 확인해가며 하나의 overlayLayer에 다시 그린다(9.5장).
@@ -235,7 +321,7 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
     }
 
     if (layers.typhoon) {
-      for (const typhoon of NO_TYPHOONS) {
+      for (const typhoon of typhoons) {
         const color = TYPHOON_INTENSITY_COLOR[typhoon.intensity]
         L.circle([typhoon.lat, wrapLng(typhoon.lng)], {
           radius: typhoon.radiusKm * 1000,
@@ -266,7 +352,7 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
         L.marker([point.lat, wrapLng(point.lng)], { icon: buildWeatherIcon(L, point, labels), pane: 'weatherPane' }).addTo(layerGroup)
       }
     }
-  }, [mapReady, layers.dangerZones, layers.typhoon, layers.issues, layers.weather, weatherPoints, mapLang])
+  }, [mapReady, layers.dangerZones, layers.typhoon, layers.issues, layers.weather, weatherPoints, typhoons, mapLang])
 
   // DASHBOARD.md 9.9장 — 지도 이동(focus) 처리. 의존성은 [mapReady, focusTarget?.token]뿐이다 —
   // 좌표가 같아도 token만 바뀌면 재실행되게 하기 위해, 실제 좌표는 ref로 최신값만 읽는다.

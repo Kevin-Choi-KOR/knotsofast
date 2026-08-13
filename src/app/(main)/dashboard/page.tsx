@@ -222,7 +222,15 @@ export default function Page() {
 
       {/* 지도 영역 */}
       <div className="relative min-h-[500px] flex-1">
-        <MapView portAggregates={portAggregates} layers={layers} focusTarget={focusTarget} />
+        <MapView
+          vessels={vessels}
+          voyages={voyages}
+          positions={positions}
+          visibleVoyageIds={visibleVoyageIds}
+          portAggregates={portAggregates}
+          layers={layers}
+          focusTarget={focusTarget}
+        />
       </div>
     </div>
   )

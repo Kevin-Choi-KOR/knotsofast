@@ -1,9 +1,14 @@
 import { OWN_COMPANY_NAME } from '@/shared/constants'
 import { formatDate, formatDateTime } from '@/shared/utils/format'
-import { formatPortLabel, type Port } from '@/mocks/ports'
+import { formatPortLabel, getPortCode, type Port } from '@/mocks/ports'
 import type { RegionalIssue, TyphoonWarning } from '@/mocks/map-overlays'
 import type { PortAggregate, PortVesselEntry } from '@/features/dashboard/portAggregation'
 import type { MapLabels } from '@/features/dashboard/mapLabels'
+import type { AisPosition, Vessel, Voyage } from '@/shared/types'
+
+function portShortLabel(portLabel: string): string {
+  return getPortCode(portLabel) ?? portLabel.split(' ')[0]
+}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -107,5 +112,48 @@ export function buildIssuePopupHtml(issue: RegionalIssue, labels: MapLabels): st
     <div style="font-size:13px;font-weight:700;">${SEVERITY_EMOJI[issue.severity]} ${escapeHtml(issue.title)}</div>
     <div style="margin-top:4px;font-size:11px;color:#334155;">${escapeHtml(issue.description)}</div>
     <div style="margin-top:4px;font-size:10px;color:#94a3b8;">${escapeHtml(labels.source)}: ${escapeHtml(issue.source)}</div>
+  </div>`
+}
+
+// DASHBOARD.md 9.7장 — 선박 마커 팝업. 자사 선박이면 맨 아래에 "제안속도 전송" 버튼(UI만 —
+// 실제 전송은 6.4/9.11장, L4에서 붙인다).
+export function buildVesselPopupHtml(
+  vessel: Vessel,
+  voyage: Voyage,
+  position: AisPosition,
+  isOwn: boolean,
+  statusColor: string,
+  labels: MapLabels,
+): string {
+  const companyHtml = isOwn
+    ? `<span style="color:#6366f1;">${escapeHtml(labels.ownFleet)}</span>`
+    : `<span style="color:#64748b;">${escapeHtml(vessel.company)}</span>`
+
+  const statusBadge = `<span style="display:inline-block;padding:1px 8px;border-radius:9999px;font-size:10px;font-weight:600;background:${statusColor}22;color:${statusColor};">${escapeHtml(labels.statusLabel(voyage.status))}</span>`
+
+  const rows = [
+    [labels.voyage, `${portShortLabel(voyage.departurePort)} → ${portShortLabel(voyage.arrivalPort)}`],
+    [labels.currentSpeed, `${position.speedKnots.toFixed(1)} kts`],
+    [labels.eta, formatDate(voyage.eta)],
+  ]
+  const rowsHtml = rows
+    .map(
+      ([label, value]) =>
+        `<tr><td style="color:#64748b;">${escapeHtml(label)}</td><td style="text-align:right;">${escapeHtml(value)}</td></tr>`,
+    )
+    .join('')
+
+  const sendSpeedBtn = isOwn
+    ? `<button type="button" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;background:#6366f1;color:white;font-size:11px;font-weight:600;border:none;cursor:pointer;">${escapeHtml(labels.sendSpeedBtn)}</button>`
+    : ''
+
+  return `<div style="width:210px;">
+    <div style="font-size:14px;font-weight:600;">${escapeHtml(vessel.name)}</div>
+    <div style="font-size:11px;">${companyHtml}</div>
+    <table style="margin-top:6px;font-size:11px;width:100%;">
+      ${rowsHtml}
+      <tr><td style="color:#64748b;">${escapeHtml(labels.status)}</td><td style="text-align:right;">${statusBadge}</td></tr>
+    </table>
+    ${sendSpeedBtn}
   </div>`
 }
