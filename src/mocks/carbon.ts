@@ -29,3 +29,19 @@ export const MOCK_FLEET_ECO_RANKING = [
   { vesselId: 'v002', co2SavedPct: 14.2, co2SavedTon: 588.3 },  // KSF NAVIGATOR
   { vesselId: 'v003', co2SavedPct: 9.8,  co2SavedTon: 401.7 },  // KSF VENTURE
 ]
+
+// 환산 가치(랭킹) — EU ETS 해운 탄소배출권 참고 시세(€80/ton, ₩1,440/€ 가정)
+export const CARBON_PRICE_KRW_PER_TON = 115_000
+
+// CII 월별 추이 x축 — 현재 점수로 끝나도록 역산해 값을 채운다
+export const CII_TREND_MONTHS = ['2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08']
+
+// 재미 요소 환산 계수 (참고용 근사값)
+export const CO2_TREE_ABSORB_TON_PER_YEAR = 0.022 // 성목 1그루 연간 흡수량 ≈ 22kg
+export const CO2_CAR_TON_PER_KM = 0.00012 // 승용차 1km 배출량 ≈ 120g
+export const EARTH_CIRCUMFERENCE_KM = 40075
+export const CO2_CHICKEN_TON = 0.0025 // 치킨 1마리 조리 탄소발자국 ≈ 2.5kg
+
+// 대기 탄소·컴플라이언스 환산 기준
+export const ANCHOR_REFERENCE_CO2_TON = 3976.4 // voy001의 원본 예시 CO₂ 총량
+export const COMPLIANCE_BASE_KRW = 1_500_000_000 // 월 손실 기준액

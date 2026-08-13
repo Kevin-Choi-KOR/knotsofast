@@ -44,8 +44,8 @@ next-env.d.ts
 # prisma generated client
 /src/generated/prisma
 
-# ignore all markdown files except README.md, AGENTS.md, CLAUDE.md
+# ignore all markdown files except README.md, AGENTS.md, CLAUDE.md at repo root
 *.md
-!README.md
-!AGENTS.md
-!CLAUDE.md
+!/README.md
+!/AGENTS.md
+!/CLAUDE.md
