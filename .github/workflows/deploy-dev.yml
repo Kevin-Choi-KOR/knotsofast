@@ -1,0 +1,91 @@
+name: CI & Deploy → Dev (Cloud Run)
+
+on:
+  push:
+    branches: [dev]
+
+env:
+  GCP_PROJECT_ID: knot-so-fast
+  GCP_REGION: asia-northeast3
+  SERVICE_NAME: knotsofast-dev
+  IMAGE: asia-northeast3-docker.pkg.dev/knot-so-fast/knotsofast/web
+  WIF_PROVIDER: projects/342328020529/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider-knotsofast
+  WIF_SA: github-actions-deployer@knot-so-fast.iam.gserviceaccount.com
+  # Gemini(Vertex AI) — 서비스 계정 키 없이 Cloud Run 런타임 서비스 계정의 ADC로 인증한다.
+  # 이 리전은 Cloud Run 배포 리전(GCP_REGION)과 무관하게 Vertex AI Gemini 모델이 제공되는 리전이어야 한다.
+  GEMINI_VERTEX_LOCATION: us-central1
+
+jobs:
+  build:
+    name: CI (빌드·린트)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 린트
+        run: npm run lint
+
+      - name: 빌드
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  deploy:
+    name: Deploy → Dev
+    runs-on: ubuntu-latest
+    needs: build        # CI 통과 후에만 실행
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Google Cloud 인증 (Workload Identity)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SA }}
+
+      - name: gcloud SDK 설정
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Docker 인증
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Docker 이미지 빌드 & 푸시
+        run: |
+          docker build -t ${{ env.IMAGE }}:${{ github.sha }} \
+                       -t ${{ env.IMAGE }}:latest \
+                       .
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Cloud Run 배포
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region:  ${{ env.GCP_REGION }}
+          image:   ${{ env.IMAGE }}:${{ github.sha }}
+          flags:   >-
+            --port=8080
+            --allow-unauthenticated
+            --min-instances=0
+            --max-instances=3
+            --memory=512Mi
+            --cpu=1
+          env_vars: |
+            GOOGLE_GENAI_USE_VERTEXAI=true
+            GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT_ID }}
+            GOOGLE_CLOUD_LOCATION=${{ env.GEMINI_VERTEX_LOCATION }}
+          secrets: |
+            DATABASE_URL=database-url-knotsofast:latest

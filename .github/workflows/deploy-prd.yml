@@ -1,0 +1,108 @@
+name: Deploy → Prd (Cloud Run)
+
+on:
+  push:
+    branches: [prd]
+  workflow_dispatch:    # 수동 재실행(예: 배포 재시도) — 이 경우도 아래 승인 검증을 동일하게 통과해야 함
+
+env:
+  GCP_PROJECT_ID: knot-so-fast
+  GCP_REGION: asia-northeast3
+  SERVICE_NAME: knotsofast-prd
+  IMAGE: asia-northeast3-docker.pkg.dev/knot-so-fast/knotsofast/web
+  WIF_PROVIDER: projects/342328020529/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider-knotsofast
+  WIF_SA: github-actions-deployer@knot-so-fast.iam.gserviceaccount.com
+  # Gemini(Vertex AI) — 서비스 계정 키 없이 Cloud Run 런타임 서비스 계정의 ADC로 인증한다.
+  # 이 리전은 Cloud Run 배포 리전(GCP_REGION)과 무관하게 Vertex AI Gemini 모델이 제공되는 리전이어야 한다.
+  GEMINI_VERTEX_LOCATION: us-central1
+
+jobs:
+  verify-approval:
+    name: PR 승인 검증
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: prd로 머지된 승인(APPROVED) PR인지 확인
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # 이 커밋(github.sha)에 연결된, prd로 머지된 PR을 조회한다.
+          # 직접 push(PR을 거치지 않은 커밋)는 여기서 빈 배열이 나와 곧바로 차단된다.
+          PRS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '[.[] | select(.base.ref == "prd" and .merged_at != null)]')
+          COUNT=$(echo "$PRS" | jq 'length')
+
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::이 커밋(${{ github.sha }})은 prd로 머지된 PR과 연결되어 있지 않습니다(직접 push 등). 배포를 중단합니다."
+            exit 1
+          fi
+
+          PR_NUMBER=$(echo "$PRS" | jq -r '.[0].number')
+          echo "연결된 PR: #$PR_NUMBER"
+
+          # 리뷰어별 최신 상태만 남겨서(같은 사람이 재리뷰한 경우 이전 승인은 무효) 승인 여부를 판단한다.
+          APPROVED=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/reviews" \
+            --jq '[group_by(.user.login) | .[] | max_by(.submitted_at) | select(.state == "APPROVED")] | length')
+
+          if [ "$APPROVED" -lt 1 ]; then
+            echo "::error::PR #$PR_NUMBER 는 승인(APPROVED) 리뷰가 없습니다. 배포를 중단합니다."
+            exit 1
+          fi
+
+          echo "PR #$PR_NUMBER 승인 확인됨 — 배포를 진행합니다."
+
+  deploy:
+    name: Deploy → Prd
+    runs-on: ubuntu-latest
+    needs: verify-approval
+    environment: production
+    permissions:
+      contents: read
+      id-token: write     # Workload Identity Federation 필수
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Google Cloud 인증 (Workload Identity)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SA }}
+
+      - name: gcloud SDK 설정
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Docker 인증
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Docker 이미지 빌드 & 푸시
+        run: |
+          docker build -t ${{ env.IMAGE }}:${{ github.sha }} \
+                       -t ${{ env.IMAGE }}:prd \
+                       .
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:prd
+
+      - name: Cloud Run 배포 (Production)
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region:  ${{ env.GCP_REGION }}
+          image:   ${{ env.IMAGE }}:${{ github.sha }}
+          flags:   >-
+            --port=8080
+            --allow-unauthenticated
+            --min-instances=1
+            --max-instances=10
+            --memory=1Gi
+            --cpu=1
+          env_vars: |
+            GOOGLE_GENAI_USE_VERTEXAI=true
+            GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT_ID }}
+            GOOGLE_CLOUD_LOCATION=${{ env.GEMINI_VERTEX_LOCATION }}
+          secrets: |
+            DATABASE_URL=database-url-knotsofast:latest
