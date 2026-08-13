@@ -23,9 +23,10 @@ interface VesselGaugeCardProps {
   row: FleetGaugeRow
   selected: boolean
   onToggle: () => void
+  onLocate: () => void
 }
 
-function VesselGaugeCard({ row, selected, onToggle }: VesselGaugeCardProps) {
+function VesselGaugeCard({ row, selected, onToggle, onLocate }: VesselGaugeCardProps) {
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -54,7 +55,10 @@ function VesselGaugeCard({ row, selected, onToggle }: VesselGaugeCardProps) {
         <button
           type="button"
           title="현재 위치로 이동"
-          onClick={stopClick}
+          onClick={(e) => {
+            stopClick(e)
+            onLocate()
+          }}
           className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
         >
           <LocateFixed size={14} />
@@ -132,6 +136,7 @@ export interface FleetGaugeCardProps {
   onDeselectAll: () => void
   expanded: boolean
   onToggleExpanded: () => void
+  onLocateVessel: (row: FleetGaugeRow) => void
 }
 
 export function FleetGaugeCard({
@@ -142,6 +147,7 @@ export function FleetGaugeCard({
   onDeselectAll,
   expanded,
   onToggleExpanded,
+  onLocateVessel,
 }: FleetGaugeCardProps) {
   const [search, setSearch] = useState('')
 
@@ -192,6 +198,7 @@ export function FleetGaugeCard({
               row={row}
               selected={selectedVoyageIds.has(row.voyage.id)}
               onToggle={() => onToggleVoyage(row.voyage.id)}
+              onLocate={() => onLocateVessel(row)}
             />
           ))}
         </div>

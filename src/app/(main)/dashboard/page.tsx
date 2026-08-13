@@ -6,10 +6,13 @@ import { PageHeader } from '@/shared/components/PageHeader'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { useVoyages } from '@/shared/hooks/useVoyages'
 import { usePositions } from '@/shared/hooks/usePositions'
-import { computeFleetGaugeRows } from '@/features/dashboard/fleetGauge'
+import { computeFleetGaugeRows, type FleetGaugeRow } from '@/features/dashboard/fleetGauge'
+import { aggregateByPort } from '@/features/dashboard/portAggregation'
+import { findPort } from '@/mocks/ports'
 import { SummaryCards } from '@/features/dashboard/SummaryCards'
 import { FleetGaugeCard } from '@/features/dashboard/FleetGaugeCard'
 import { FilterBar } from '@/features/dashboard/FilterBar'
+import { ListPanel } from '@/features/dashboard/ListPanel'
 import {
   computeDestinations,
   computeVisibleVoyageIds,
@@ -17,7 +20,7 @@ import {
   showVesselsForFilters,
   type QuickFilterKey,
 } from '@/features/dashboard/filters'
-import type { MapViewHandle, MapViewProps } from '@/features/dashboard/MapView'
+import type { MapFocusTarget, MapViewProps } from '@/features/dashboard/MapView'
 
 // Leaflet은 window에 의존한다 — 반드시 SSR을 끄고 동적 import 한다(DASHBOARD.md 9.1장).
 const MapView = dynamic<MapViewProps>(() => import('@/features/dashboard/MapView'), { ssr: false })
@@ -26,8 +29,6 @@ export default function Page() {
   const { vessels } = useVessels()
   const { voyages } = useVoyages()
   const { positions } = usePositions()
-
-  const mapHandleRef = useRef<MapViewHandle | null>(null)
 
   const activeVoyages = useMemo(
     () => voyages.filter((voyage) => voyage.status === 'underway' || voyage.status === 'delayed'),
@@ -38,6 +39,9 @@ export default function Page() {
     () => computeFleetGaugeRows(vessels, voyages, positions),
     [vessels, voyages, positions],
   )
+
+  // DASHBOARD.md 9.6장 — 지도(항구 레이어)와 리스트 패널이 반드시 같은 숫자를 보도록 한 번만 계산해 공유한다.
+  const portAggregates = useMemo(() => aggregateByPort(voyages, vessels), [voyages, vessels])
 
   // DASHBOARD.md 14장 8번 — 최초 진입 시 활성 항차를 전부 선택한다. useRef 플래그로 1회만 실행해야
   // 사용자가 해제한 선택이 데이터 갱신(polling)마다 되살아나지 않는다.
@@ -113,6 +117,15 @@ export default function Page() {
     return `${parts.join(' · ')} 표시 중`
   }, [showVessels, visibleVoyageIds, layers])
 
+  // DASHBOARD.md 9.9장 — 지도 이동(focus). token을 매번 증가시켜 같은 좌표 재클릭도 반응하게 한다.
+  const focusTokenRef = useRef(0)
+  const [focusTarget, setFocusTarget] = useState<MapFocusTarget | undefined>(undefined)
+
+  const focusMap = (target: Omit<MapFocusTarget, 'token'>) => {
+    focusTokenRef.current += 1
+    setFocusTarget({ ...target, token: focusTokenRef.current })
+  }
+
   // DASHBOARD.md 7.2장 — wasActive는 업데이터 바깥에서 먼저 읽고, 다른 setter도 바깥에서 한 번만
   // 호출한다. 업데이터 안에서 다른 setter를 부르면 부수효과가 중복 실행돼 필터가 간헐적으로
   // 안 먹는 버그가 난다(KNOWN_PITFALLS.md 1.3장).
@@ -135,11 +148,34 @@ export default function Page() {
       if (!wasActive) setSelectedVoyageIds(new Set(fleetGaugeRows.map((row) => row.voyage.id)))
       setGaugesOpen((v) => !v)
     }
-    mapHandleRef.current?.resetView()
+    // 9.9장 호출 지점 표 — 빠른 필터 토글(리셋): 줌 3, [20,100], direct, 팝업 없음.
+    focusMap({ lat: 20, lng: 100, zoom: 3, direct: true })
   }
 
   const toggleDestination = (code: string | null) => {
     setSelectedDestinationCode((prev) => (code === prev ? null : code))
+  }
+
+  // 9.9장 호출 지점 표 — 게이지 카드 LocateFixed: 줌 8, flyTo, 팝업 없음.
+  const locateVessel = (row: FleetGaugeRow) => {
+    focusMap({ lat: row.position.lat, lng: row.position.lng, zoom: 8 })
+  }
+
+  // 9.9장 호출 지점 표 — 이슈 리스트 항목: 줌 6, flyTo, 팝업 있음.
+  const focusIssue = (issue: { id: string; lat: number; lng: number }) => {
+    focusMap({ lat: issue.lat, lng: issue.lng, zoom: 6, marker: { kind: 'issue', id: issue.id } })
+  }
+
+  // 9.9장 호출 지점 표 — 위험구역 리스트 항목: 줌 6, flyTo, 팝업 없음.
+  const focusDangerZone = (zone: { center: [number, number] }) => {
+    focusMap({ lat: zone.center[0], lng: zone.center[1], zoom: 6 })
+  }
+
+  // 9.9장 호출 지점 표 — 항구 리스트 항목: 줌 9, flyTo, 팝업 있음.
+  const focusPortByCode = (code: string) => {
+    const port = findPort(code)
+    if (!port) return
+    focusMap({ lat: port.lat, lng: port.lng, zoom: 9, marker: { kind: 'port', id: code } })
   }
 
   return (
@@ -159,6 +195,7 @@ export default function Page() {
           onDeselectAll={deselectAllGauge}
           expanded={gaugesOpen}
           onToggleExpanded={() => setGaugesOpen((v) => !v)}
+          onLocateVessel={locateVessel}
         />
       )}
 
@@ -173,18 +210,19 @@ export default function Page() {
         summaryText={summaryText}
       />
 
-      {/* 이슈·항구 리스트 패널 — "이슈"/"항구" 빠른 필터가 생기는 L2 이후 조건부 렌더링 */}
+      {/* 이슈·항구 리스트 패널 */}
+      <ListPanel
+        showIssues={activeFilters.has('issues')}
+        showPorts={activeFilters.has('ports')}
+        portAggregates={portAggregates}
+        onFocusIssue={focusIssue}
+        onFocusDangerZone={focusDangerZone}
+        onFocusPort={focusPortByCode}
+      />
 
       {/* 지도 영역 */}
       <div className="relative min-h-[500px] flex-1">
-        <MapView
-          vessels={vessels}
-          voyages={voyages}
-          layers={layers}
-          onReady={(handle) => {
-            mapHandleRef.current = handle
-          }}
-        />
+        <MapView portAggregates={portAggregates} layers={layers} focusTarget={focusTarget} />
       </div>
     </div>
   )

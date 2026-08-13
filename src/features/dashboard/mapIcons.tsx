@@ -2,13 +2,7 @@ import type * as Leaflet from 'leaflet'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Container, Skull, ShieldAlert, Tornado, Waves } from 'lucide-react'
 import type { RegionalIssue, TyphoonWarning } from '@/mocks/map-overlays'
-
-const ISSUE_TYPE_COLOR: Record<RegionalIssue['type'], string> = {
-  piracy: '#ef4444',
-  port_congestion: '#f59e0b',
-  geopolitical: '#8b5cf6',
-  canal_control: '#6366f1',
-}
+import { ISSUE_TYPE_COLOR } from '@/features/dashboard/issueTypes'
 
 const ISSUE_TYPE_ICON: Record<RegionalIssue['type'], typeof Skull> = {
   piracy: Skull,
