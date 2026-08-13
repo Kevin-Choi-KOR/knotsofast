@@ -149,6 +149,17 @@ function HeroPanel({ t }: { t: Translations }) {
           </div>
         </div>
       </div>
+
+      {/* 참가 해커톤명 — 히어로 패널 하단 중앙 워터마크 */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center">
+        <Image
+          src="/images/move-ai-challenge.png"
+          alt="MOVE AI CHALLENGE 2026"
+          width={1402}
+          height={418}
+          className="h-auto w-[162px] opacity-90"
+        />
+      </div>
     </div>
   )
 }
