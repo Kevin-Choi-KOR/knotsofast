@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { LoadingState } from '@/shared/components/Spinner'
@@ -10,6 +10,7 @@ import { useReports } from '@/shared/hooks/useReports'
 import { useVoyages } from '@/shared/hooks/useVoyages'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { usePositions } from '@/shared/hooks/usePositions'
+import { AI_REPORT_VESSEL_STORAGE_KEY } from '@/shared/constants'
 import { ReportCard } from '@/features/ai-report/components/ReportCard'
 import { buildReportView } from '@/features/ai-report/lib/reportView'
 import { useReanalyze } from '@/features/ai-report/hooks/useReanalyze'
@@ -48,6 +49,18 @@ export default function Page() {
       // API가 정렬 없이 조회하므로(findMany), 재검증마다 행 순서가 바뀌지 않도록 여기서 고정 정렬한다.
       .sort((a, b) => a.report.id.localeCompare(b.report.id))
   }, [reports, voyages, vessels, positions])
+
+  // 대시보드 게이지 카드 AI 버튼 → AI 리포트 딥링크(DASHBOARD.md 10.1장). 1회성 sessionStorage
+  // 키를 마운트 시 읽고, 해당 선박의 리포트가 로드되면 그 카드를 펼친 뒤 즉시 키를 제거한다.
+  useEffect(() => {
+    const vesselId = sessionStorage.getItem(AI_REPORT_VESSEL_STORAGE_KEY)
+    if (!vesselId || rows.length === 0) return
+    const row = rows.find((r) => r.vessel.id === vesselId)
+    sessionStorage.removeItem(AI_REPORT_VESSEL_STORAGE_KEY)
+    if (!row) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpandedId(row.report.id)
+  }, [rows])
 
   const effectiveExpandedId = expandedId ?? rows[0]?.report.id ?? null
 

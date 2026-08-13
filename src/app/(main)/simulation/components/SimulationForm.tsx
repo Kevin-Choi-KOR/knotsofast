@@ -7,6 +7,14 @@ import type { Vessel, Voyage } from '@/shared/types'
 import type { PortCongestion } from '@/mocks/simulation'
 import { CONGESTION_WAIT_HOURS } from '@/mocks/simulation'
 import { AVG_BERTH_UNLOAD_HOURS } from '@/mocks/simulation'
+import {
+  DEPARTURE_OFFSET_MAX_H,
+  DEPARTURE_OFFSET_MIN_H,
+  DEPARTURE_OFFSET_STEP_H,
+  SPEED_MAX_KNOTS,
+  SPEED_MIN_KNOTS,
+  SPEED_STEP_KNOTS,
+} from '@/mocks/simulation'
 import type { SimRoute } from '@/shared/utils/simulation'
 
 const CONGESTION_OPTIONS: PortCongestion[] = ['low', 'medium', 'high', 'severe']
@@ -185,17 +193,17 @@ export function SimulationForm({
           </div>
           <input
             type="range"
-            min={-24}
-            max={72}
-            step={6}
+            min={DEPARTURE_OFFSET_MIN_H}
+            max={DEPARTURE_OFFSET_MAX_H}
+            step={DEPARTURE_OFFSET_STEP_H}
             value={departureOffset}
             onChange={(e) => onDepartureOffsetChange(Number(e.target.value))}
             className="w-full accent-[#6366f1]"
           />
           <div className="mt-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>-24h</span>
+            <span>{DEPARTURE_OFFSET_MIN_H}h</span>
             <span>0</span>
-            <span>+72h</span>
+            <span>+{DEPARTURE_OFFSET_MAX_H}h</span>
           </div>
         </div>
 
@@ -206,16 +214,20 @@ export function SimulationForm({
           </div>
           <input
             type="range"
-            min={10}
-            max={20}
-            step={0.5}
+            min={SPEED_MIN_KNOTS}
+            max={SPEED_MAX_KNOTS}
+            step={SPEED_STEP_KNOTS}
             value={speedKnots}
             onChange={(e) => onSpeedKnotsChange(Number(e.target.value))}
             className="w-full accent-[#6366f1]"
           />
           <div className="mt-1 flex justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>10 kts ({t.simulation.slowSteam})</span>
-            <span>20 kts ({t.simulation.max})</span>
+            <span>
+              {SPEED_MIN_KNOTS} kts ({t.simulation.slowSteam})
+            </span>
+            <span>
+              {SPEED_MAX_KNOTS} kts ({t.simulation.max})
+            </span>
           </div>
         </div>
 

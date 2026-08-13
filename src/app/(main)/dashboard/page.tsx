@@ -7,6 +7,7 @@ import { useLanguage } from '@/features/i18n/LanguageContext'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { useVoyages } from '@/shared/hooks/useVoyages'
 import { usePositions } from '@/shared/hooks/usePositions'
+import { useReports } from '@/shared/hooks/useReports'
 import { computeFleetGaugeRows, type FleetGaugeRow } from '@/features/dashboard/fleetGauge'
 import { aggregateByPort } from '@/features/dashboard/portAggregation'
 import { findPort } from '@/mocks/ports'
@@ -32,6 +33,7 @@ export default function Page() {
   const { vessels } = useVessels()
   const { voyages } = useVoyages()
   const { positions } = usePositions()
+  const { reports } = useReports()
 
   const activeVoyages = useMemo(
     () => voyages.filter((voyage) => voyage.status === 'underway' || voyage.status === 'delayed'),
@@ -235,6 +237,7 @@ export default function Page() {
           portAggregates={portAggregates}
           layers={layers}
           focusTarget={focusTarget}
+          reports={reports}
         />
       </div>
     </div>

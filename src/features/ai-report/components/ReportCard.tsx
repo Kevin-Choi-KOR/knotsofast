@@ -206,7 +206,7 @@ export function ReportCard({
           <div className="w-28 text-center">
             <div
               className={cn(
-                'text-lg font-bold',
+                'text-xl font-bold',
                 fuelSaving.increase ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400',
               )}
             >
@@ -216,7 +216,7 @@ export function ReportCard({
           </div>
 
           <div className="w-40 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-lg font-bold text-slate-700 dark:text-slate-200">
+            <div className="flex items-center justify-center gap-1.5 text-xl font-bold text-slate-700 dark:text-slate-200">
               <span>{view.currentSpeedKnots.toFixed(1)}</span>
               <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
               <span className="text-[#6366f1]">{view.speedPlan.recommendedSpeedKnots.toFixed(1)}</span>
@@ -226,7 +226,7 @@ export function ReportCard({
           </div>
 
           <div className="w-44 text-center">
-            <div className={cn('text-lg font-bold', CONFIDENCE_TEXT_CLASS[probability.confidence])}>
+            <div className={cn('text-xl font-bold', CONFIDENCE_TEXT_CLASS[probability.confidence])}>
               {Math.round(probability.percent)}%
             </div>
             <div className="text-xs text-slate-400 dark:text-slate-500">
@@ -521,14 +521,16 @@ export function ReportCard({
                 {reanalyzeError === 'no_api_key' ? t.aiReport.aiApiKeyMissing : t.aiReport.aiReanalyzeFailed}
               </div>
             )}
-            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-600 dark:text-slate-300">
-              {report.reasoning
-                .split('\n')
-                .filter((line) => line.trim().length > 0)
-                .map((line, i) => (
-                  <li key={i}>{line}</li>
-                ))}
-            </ul>
+            <div className="mt-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <ul className="list-disc space-y-1.5 pl-5 text-sm text-slate-600 dark:text-slate-300">
+                {report.reasoning
+                  .split('\n')
+                  .filter((line) => line.trim().length > 0)
+                  .map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+              </ul>
+            </div>
           </div>
 
           <div>
@@ -569,7 +571,9 @@ export function ReportCard({
               {t.aiReport.regionalIssuesTitle}
             </h3>
             {view.issues.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t.aiReport.noNearbyIssues}</p>
+              <div className="mt-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                {t.aiReport.noNearbyIssues}
+              </div>
             ) : (
               <div className="mt-2 space-y-2">
                 {view.issues.map((issue) => (

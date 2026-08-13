@@ -1,7 +1,17 @@
 import type { Vessel, Voyage } from '@/shared/types'
-import { fuelEmissionFactor, interpolateFuelTonPerDay } from '@/shared/utils/format'
+import { fuelEmissionFactor, interpolateFuelTonPerDay, resolveDeadline } from '@/shared/utils/format'
 import type { PortCongestion } from '@/mocks/simulation'
-import { CANAL_TOLL_USD, CAPE_DISTANCE_FACTOR, REFERENCE_SPEED_KNOTS } from '@/mocks/simulation'
+import {
+  CANAL_TOLL_USD,
+  CAPE_DISTANCE_FACTOR,
+  DEPARTURE_OFFSET_MAX_H,
+  DEPARTURE_OFFSET_MIN_H,
+  DEPARTURE_OFFSET_STEP_H,
+  REFERENCE_SPEED_KNOTS,
+  SPEED_MAX_KNOTS,
+  SPEED_MIN_KNOTS,
+  SPEED_STEP_KNOTS,
+} from '@/mocks/simulation'
 
 export type SimRoute = 'suez' | 'cape'
 
@@ -106,5 +116,101 @@ export function computeSaving(planned: SimulationResult, simulated: SimulationRe
     fuel: planned.fuel - simulated.fuel,
     cost: planned.cost - simulated.cost,
     co2: planned.co2 - simulated.co2,
+  }
+}
+
+const SEARCH_ROUTES: SimRoute[] = ['suez', 'cape']
+
+function departureOffsetSteps(): number[] {
+  const steps: number[] = []
+  for (let h = DEPARTURE_OFFSET_MIN_H; h <= DEPARTURE_OFFSET_MAX_H; h += DEPARTURE_OFFSET_STEP_H) steps.push(h)
+  return steps
+}
+
+export interface FuelOptimalCandidate {
+  departureOffset: number
+  speedKnots: number
+  route: SimRoute
+  requiredSpeedKnots: number
+  feasible: boolean
+  marginHours: number
+  deadlineTerm: 'RTA' | 'STA'
+  deadlineIso: string
+  result: SimulatedResult
+}
+
+/**
+ * RTA(확정 시) 또는 STA를 마감으로 고정하고, 항로·출발시점 조합마다 마감을 딱 맞추는 최소 속도를
+ * 해석적으로 구한다 — 연료는 속도²에 비례해 증가하므로(계산식 참고) 마감을 지키는 한 항상 가장
+ * 느린 속도가 그 조합의 최적이다. 화물 적재율은 실제 운송 요건이라 탐색 대상에서 제외하고
+ * 현재 값을 그대로 쓴다. 이렇게 구한 조합들 중 연료가 가장 적은 것을 최종 추천으로 고른다.
+ * 어떤 조합으로도 마감을 지킬 수 없으면 마감을 가장 조금 넘기는 조합을 최고속력(feasible=false)
+ * 으로 대신 반환한다.
+ */
+export function findFuelOptimalCombination(
+  voyage: Voyage,
+  vessel: Vessel,
+  current: SimInputs,
+  portWaitHours: number,
+): FuelOptimalCandidate {
+  const { term, deadlineIso } = resolveDeadline(voyage)
+  const deadlineMs = new Date(deadlineIso).getTime()
+  const etdBaseMs = new Date(voyage.etd).getTime()
+
+  let best: FuelOptimalCandidate | null = null
+  let bestInfeasible: FuelOptimalCandidate | null = null
+
+  for (const route of SEARCH_ROUTES) {
+    const distance = routeDistanceOf(voyage, route)
+    for (const departureOffset of departureOffsetSteps()) {
+      const etdMs = etdBaseMs + departureOffset * 3_600_000
+      const hoursAvailable = (deadlineMs - etdMs) / 3_600_000 - portWaitHours
+      if (hoursAvailable <= 0) continue
+
+      const requiredRaw = distance / hoursAvailable
+      const feasible = requiredRaw <= SPEED_MAX_KNOTS
+      const speedKnots = feasible
+        ? Math.max(SPEED_MIN_KNOTS, Math.ceil(requiredRaw / SPEED_STEP_KNOTS) * SPEED_STEP_KNOTS)
+        : SPEED_MAX_KNOTS
+
+      const inputs: SimInputs = { ...current, departureOffset, speedKnots, route }
+      const result = computeSimulatedResult(voyage, vessel, inputs, portWaitHours)
+      const marginHours = (deadlineMs - result.eta.getTime()) / 3_600_000
+
+      const candidate: FuelOptimalCandidate = {
+        departureOffset,
+        speedKnots,
+        route,
+        requiredSpeedKnots: Math.round(requiredRaw * 10) / 10,
+        feasible,
+        marginHours,
+        deadlineTerm: term,
+        deadlineIso,
+        result,
+      }
+
+      if (feasible) {
+        if (!best || candidate.result.fuel < best.result.fuel) best = candidate
+      } else if (!bestInfeasible || candidate.requiredSpeedKnots < bestInfeasible.requiredSpeedKnots) {
+        bestInfeasible = candidate
+      }
+    }
+  }
+
+  if (best) return best
+  if (bestInfeasible) return bestInfeasible
+
+  // 출발을 24h 앞당겨도 시간이 부족한 극단적인 경우 — 현재 조건을 그대로 반환한다.
+  const fallbackResult = computeSimulatedResult(voyage, vessel, current, portWaitHours)
+  return {
+    departureOffset: current.departureOffset,
+    speedKnots: current.speedKnots,
+    route: current.route,
+    requiredSpeedKnots: SPEED_MAX_KNOTS,
+    feasible: false,
+    marginHours: (deadlineMs - fallbackResult.eta.getTime()) / 3_600_000,
+    deadlineTerm: term,
+    deadlineIso,
+    result: fallbackResult,
   }
 }
