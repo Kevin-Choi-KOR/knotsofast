@@ -136,6 +136,10 @@ export const ko = {
   aiReport: {
     title: 'AI 운항 리포트',
     subtitle: '에코스피드 권장안 및 운항 리스크 보고서',
+    vesselTypeContainer: '컨테이너선',
+    vesselTypeBulk: '벌크선',
+    vesselTypeTanker: '탱커선',
+    vesselTypeRoro: '로로선',
     reanalyze: '재분석',
     reanalyzeAll: '전체 재분석',
     downloadPdf: 'PDF 다운로드',
@@ -400,6 +404,10 @@ export const en: Translations = {
   aiReport: {
     title: 'AI Operations Report',
     subtitle: 'Eco-speed recommendations & voyage risk reports',
+    vesselTypeContainer: 'Container',
+    vesselTypeBulk: 'Bulk Carrier',
+    vesselTypeTanker: 'Tanker',
+    vesselTypeRoro: 'RoRo',
     reanalyze: 'Reanalyze',
     reanalyzeAll: 'Reanalyze All',
     downloadPdf: 'Download PDF',
