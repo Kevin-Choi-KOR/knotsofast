@@ -129,6 +129,9 @@ export const ko = {
     rankSummary: (r: string, t: string): string => `현재 항차는 전체 ${t}척 중 ${r}위예요`,
     rankValueDisclaimer:
       '* 환산 가치는 EU ETS 해운 탄소배출권 참고 시세(약 €80/ton, ₩115,000/ton 가정)로 계산한 추정치입니다',
+    pctSaved: '% 절감',
+    pctExceeded: '% 초과',
+    pctIncreased: '% 증가',
   },
 }
 
@@ -267,5 +270,8 @@ export const en: Translations = {
     rankCurrentTag: 'this voyage',
     rankSummary: (r: string, t: string): string => `This voyage ranks #${r} of ${t} vessels`,
     rankValueDisclaimer: '* Estimated using a reference carbon price (EU ETS, ~€80/ton, assumed ₩115,000/ton)',
+    pctSaved: '% saved',
+    pctExceeded: '% over',
+    pctIncreased: '% more',
   },
 }
