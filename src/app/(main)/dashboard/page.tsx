@@ -1,12 +1,16 @@
 'use client'
 
 import { useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { useVessels } from '@/shared/hooks/useVessels'
 import { useVoyages } from '@/shared/hooks/useVoyages'
 import { usePositions } from '@/shared/hooks/usePositions'
 import { computeFleetGaugeRows } from '@/features/dashboard/fleetGauge'
 import { SummaryCards } from '@/features/dashboard/SummaryCards'
+
+// Leaflet은 window에 의존한다 — 반드시 SSR을 끄고 동적 import 한다(DASHBOARD.md 9.1장).
+const MapView = dynamic(() => import('@/features/dashboard/MapView'), { ssr: false })
 
 export default function Page() {
   const { vessels } = useVessels()
@@ -41,8 +45,8 @@ export default function Page() {
       {/* 이슈·항구 리스트 패널 — "이슈"/"항구" 빠른 필터가 생기는 L2 이후 조건부 렌더링 */}
 
       {/* 지도 영역 */}
-      <div className="flex min-h-[500px] flex-1 items-center justify-center bg-slate-100 text-sm text-slate-400 dark:bg-slate-900 dark:text-slate-600">
-        지도 영역 (MapView) — 다음 단계에서 구현
+      <div className="flex min-h-[500px] flex-1">
+        <MapView />
       </div>
     </div>
   )
