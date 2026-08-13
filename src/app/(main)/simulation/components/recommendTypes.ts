@@ -1,3 +1,5 @@
+import type { SimRoute } from '@/shared/utils/simulation'
+
 /** POST /api/simulation/recommend 요청/응답 payload. */
 export interface AiSimulationRecommendRequest {
   lang: 'ko' | 'en'
@@ -11,13 +13,15 @@ export interface AiSimulationRecommendRequest {
   portWaitHours: number
   plan: {
     speedKnots: number
-    route: 'suez' | 'cape'
+    // 클릭 직전 사용자가 수동으로 골라둔 항로 — '기본'(수에즈·희망봉 모두 불필요)일 수도 있다.
+    route: SimRoute
     fuelTon: number
     costUsd: number
     co2Ton: number
     etaAt: string
   }
   recommendation: {
+    // 최적화 탐색은 suez·cape만 비교한다 — '기본'은 최적화 결과로 나오지 않는다.
     route: 'suez' | 'cape'
     departureOffsetH: number
     speedKnots: number
