@@ -115,8 +115,8 @@ export function buildIssuePopupHtml(issue: RegionalIssue, labels: MapLabels): st
   </div>`
 }
 
-// DASHBOARD.md 9.7장 — 선박 마커 팝업. 자사 선박이면 맨 아래에 "제안속도 전송" 버튼(UI만 —
-// 실제 전송은 6.4/9.11장, L4에서 붙인다).
+// DASHBOARD.md 9.7장 — 선박 마커 팝업. 자사 선박이면 맨 아래에 "제안속도 전송" 버튼.
+// 실제 전송은 9.11장 popupopen 이벤트 위임으로 연결한다(data-send-speed-* 속성으로 대상 식별).
 export function buildVesselPopupHtml(
   vessel: Vessel,
   voyage: Voyage,
@@ -144,7 +144,7 @@ export function buildVesselPopupHtml(
     .join('')
 
   const sendSpeedBtn = isOwn
-    ? `<button type="button" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;background:#6366f1;color:white;font-size:11px;font-weight:600;border:none;cursor:pointer;">${escapeHtml(labels.sendSpeedBtn)}</button>`
+    ? `<button type="button" data-send-speed-vessel-id="${escapeHtml(vessel.id)}" data-send-speed-voyage-id="${escapeHtml(voyage.id)}" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;background:#6366f1;color:white;font-size:11px;font-weight:600;border:none;cursor:pointer;">${escapeHtml(labels.sendSpeedBtn)}</button>`
     : ''
 
   return `<div style="width:210px;">

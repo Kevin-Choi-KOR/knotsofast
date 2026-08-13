@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Ship,
   AlertTriangle,
@@ -14,7 +15,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import type { Vessel, Voyage } from '@/shared/types'
-import { OWN_COMPANY_NAME } from '@/shared/constants'
+import { CARBON_VESSEL_STORAGE_KEY, OWN_COMPANY_NAME, SCHEDULE_CALENDAR_DATE_STORAGE_KEY } from '@/shared/constants'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import { formatNumber } from '@/shared/utils/format'
 import { ciiGradeFromScore, CII_COLORS, formatSignedPct } from '@/shared/utils/carbon'
@@ -140,6 +141,7 @@ interface EcoRankingCardProps {
 
 function EcoRankingCard({ vessels, voyages }: EcoRankingCardProps) {
   const { t } = useLanguage()
+  const router = useRouter()
   const ranking = useMemo(() => computeEcoRanking(vessels, voyages).slice(0, 3), [vessels, voyages])
 
   return (
@@ -154,7 +156,10 @@ function EcoRankingCard({ vessels, voyages }: EcoRankingCardProps) {
             key={entry.vesselId}
             type="button"
             title="탄소 배출 대시보드에서 조회"
-            onClick={() => {}}
+            onClick={() => {
+              sessionStorage.setItem(CARBON_VESSEL_STORAGE_KEY, entry.vesselId)
+              router.push('/carbon')
+            }}
             className="flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             <span className="shrink-0">{MEDALS[i]}</span>
@@ -173,6 +178,7 @@ interface WeeklyScheduleCardProps {
 }
 
 function WeeklyScheduleCard({ vessels, voyages }: WeeklyScheduleCardProps) {
+  const router = useRouter()
   const [cursorDate, setCursorDate] = useState(() => new Date())
   const today = useMemo(() => new Date(), [])
 
@@ -229,7 +235,10 @@ function WeeklyScheduleCard({ vessels, voyages }: WeeklyScheduleCardProps) {
               key={day.toISOString()}
               type="button"
               title={tooltip}
-              onClick={() => {}}
+              onClick={() => {
+                sessionStorage.setItem(SCHEDULE_CALENDAR_DATE_STORAGE_KEY, day.toISOString())
+                router.push('/schedule')
+              }}
               className="flex flex-col items-center gap-0.5 py-0.5"
             >
               <span className="text-[9px] text-slate-400">{WEEKDAY_LABELS[day.getDay()]}</span>

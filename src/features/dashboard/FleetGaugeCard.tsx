@@ -1,12 +1,19 @@
 'use client'
 
 import { useState, type KeyboardEvent, type MouseEvent } from 'react'
-import { BrainCircuit, ChevronDown, Fuel, Gauge, Leaf, LocateFixed, TrendingDown } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { BrainCircuit, ChevronDown, Fuel, Gauge, Leaf, Loader2, LocateFixed, TrendingDown } from 'lucide-react'
 import { cn } from '@/shared/utils/cn'
 import { formatShortDateTime } from '@/shared/utils/format'
 import { getPortCode } from '@/mocks/ports'
+import { AI_REPORT_VESSEL_STORAGE_KEY } from '@/shared/constants'
 import { VoyageBadge } from '@/shared/components/StatusBadge'
 import { HorizontalGauge } from '@/features/dashboard/HorizontalGauge'
+import {
+  formatSpeedRecommendationSuccessAlert,
+  sendSpeedRecommendation,
+  SPEED_RECOMMENDATION_FAIL_ALERT,
+} from '@/features/dashboard/speedRecommendation'
 import type { FleetGaugeRow } from '@/features/dashboard/fleetGauge'
 
 function portShortLabel(portLabel: string): string {
@@ -24,9 +31,12 @@ interface VesselGaugeCardProps {
   selected: boolean
   onToggle: () => void
   onLocate: () => void
+  sending: boolean
+  onSendSpeed: () => void
 }
 
-function VesselGaugeCard({ row, selected, onToggle, onLocate }: VesselGaugeCardProps) {
+function VesselGaugeCard({ row, selected, onToggle, onLocate, sending, onSendSpeed }: VesselGaugeCardProps) {
+  const router = useRouter()
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
@@ -65,15 +75,26 @@ function VesselGaugeCard({ row, selected, onToggle, onLocate }: VesselGaugeCardP
         </button>
         <button
           type="button"
-          onClick={stopClick}
-          className="flex shrink-0 items-center gap-0.5 rounded bg-[#6366f1] px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-[#4f46e5]"
+          disabled={sending}
+          onClick={(e) => {
+            stopClick(e)
+            onSendSpeed()
+          }}
+          className={cn(
+            'flex shrink-0 items-center gap-0.5 rounded bg-[#6366f1] px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-[#4f46e5]',
+            sending && 'cursor-not-allowed opacity-70',
+          )}
         >
-          <Gauge size={12} />
+          {sending ? <Loader2 size={12} className="animate-spin" /> : <Gauge size={12} />}
           Knot
         </button>
         <button
           type="button"
-          onClick={stopClick}
+          onClick={(e) => {
+            stopClick(e)
+            sessionStorage.setItem(AI_REPORT_VESSEL_STORAGE_KEY, row.vessel.id)
+            router.push('/ai-report')
+          }}
           className="flex shrink-0 items-center gap-0.5 rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
         >
           <BrainCircuit size={12} />
@@ -150,9 +171,39 @@ export function FleetGaugeCard({
   onLocateVessel,
 }: FleetGaugeCardProps) {
   const [search, setSearch] = useState('')
+  // DASHBOARD.md 6.4장 — 전송 중인 선박 id를 Set으로 관리해 버튼별로 개별 로딩을 표시한다.
+  const [sendingVesselIds, setSendingVesselIds] = useState<Set<string>>(new Set())
 
   const selectedCount = rows.filter((r) => selectedVoyageIds.has(r.voyage.id)).length
   const visibleRows = search.trim() ? rows.filter((r) => r.vessel.name.toLowerCase().includes(search.trim().toLowerCase())) : rows
+
+  const handleSendSpeed = async (row: FleetGaugeRow) => {
+    setSendingVesselIds((prev) => new Set(prev).add(row.vessel.id))
+    try {
+      const payload = {
+        vesselId: row.vessel.id,
+        vesselName: row.vessel.name,
+        imo: row.vessel.imo,
+        voyageId: row.voyage.id,
+        departurePort: row.voyage.departurePort,
+        arrivalPort: row.voyage.arrivalPort,
+        currentSpeedKnots: row.position.speedKnots,
+        recommendedSpeedKnots: row.voyage.recommendedSpeedKnots,
+        plannedSpeedKnots: row.voyage.plannedSpeedKnots,
+        eta: row.voyage.eta,
+      }
+      const result = await sendSpeedRecommendation(payload)
+      window.alert(formatSpeedRecommendationSuccessAlert(payload, result))
+    } catch {
+      window.alert(SPEED_RECOMMENDATION_FAIL_ALERT)
+    } finally {
+      setSendingVesselIds((prev) => {
+        const next = new Set(prev)
+        next.delete(row.vessel.id)
+        return next
+      })
+    }
+  }
 
   return (
     <div className="shrink-0 border-b border-slate-100 bg-white px-6 py-2 dark:border-slate-800 dark:bg-slate-800">
@@ -199,6 +250,8 @@ export function FleetGaugeCard({
               selected={selectedVoyageIds.has(row.voyage.id)}
               onToggle={() => onToggleVoyage(row.voyage.id)}
               onLocate={() => onLocateVessel(row)}
+              sending={sendingVesselIds.has(row.vessel.id)}
+              onSendSpeed={() => void handleSendSpeed(row)}
             />
           ))}
         </div>

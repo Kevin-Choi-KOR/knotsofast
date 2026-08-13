@@ -23,6 +23,11 @@ import { useTyphoons } from '@/features/dashboard/useTyphoons'
 import { useRadarTileUrl } from '@/features/dashboard/useRadarTileUrl'
 import { getActualRoute, getDisplayRoute } from '@/features/dashboard/voyageRoute'
 import { VOYAGE_STATUS_COLOR } from '@/features/dashboard/statusColors'
+import {
+  formatSpeedRecommendationSuccessAlert,
+  sendSpeedRecommendation,
+  SPEED_RECOMMENDATION_FAIL_ALERT,
+} from '@/features/dashboard/speedRecommendation'
 import { OWN_COMPANY_NAME } from '@/shared/constants'
 import type { MapLayers } from '@/features/dashboard/filters'
 import type { PortAggregate } from '@/features/dashboard/portAggregation'
@@ -113,6 +118,21 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
   const typhoons = useTyphoons()
   const radarUrl = useRadarTileUrl()
 
+  // DASHBOARD.md 9.11장 — popupopen에 한 번만 등록하는 이벤트 위임 핸들러가 항상 최신 데이터를
+  // 읽도록 ref로 동기화한다(map.on 리스너를 데이터 변경마다 재등록하지 않는다).
+  const vesselsRef = useRef(vessels)
+  const voyagesRef = useRef(voyages)
+  const positionsRef = useRef(positions)
+  useEffect(() => {
+    vesselsRef.current = vessels
+  }, [vessels])
+  useEffect(() => {
+    voyagesRef.current = voyages
+  }, [voyages])
+  useEffect(() => {
+    positionsRef.current = positions
+  }, [positions])
+
   useEffect(() => {
     // StrictMode에서 effect가 두 번 실행되는 것을 막는 가드.
     let active = true
@@ -136,6 +156,55 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
       map.setMaxBounds(WORLD_BOUNDS)
       mapRef.current = map
       leafletModuleRef.current = L
+
+      // DASHBOARD.md 9.11장 — 지도 팝업은 React 트리 밖의 raw HTML이라 onClick을 붙일 수 없다.
+      // popupopen 이벤트로 위임하고, data-send-speed-* 속성으로 대상을 식별한다.
+      map.on('popupopen', (e) => {
+        const popupEl = e.popup.getElement()
+        const btn = popupEl?.querySelector<HTMLButtonElement>('[data-send-speed-vessel-id]')
+        if (!btn) return
+
+        const vesselId = btn.dataset.sendSpeedVesselId
+        const voyageId = btn.dataset.sendSpeedVoyageId
+        if (!vesselId || !voyageId) return
+
+        btn.onclick = () => {
+          void (async () => {
+            const vessel = vesselsRef.current.find((v) => v.id === vesselId)
+            const voyage = voyagesRef.current.find((v) => v.id === voyageId)
+            const position = positionsRef.current.find((p) => p.vesselId === vesselId)
+            if (!vessel || !voyage || !position) return
+
+            const originalHtml = btn.innerHTML
+            btn.disabled = true
+            btn.style.opacity = '0.7'
+            btn.textContent = '전송 중...'
+
+            try {
+              const payload = {
+                vesselId: vessel.id,
+                vesselName: vessel.name,
+                imo: vessel.imo,
+                voyageId: voyage.id,
+                departurePort: voyage.departurePort,
+                arrivalPort: voyage.arrivalPort,
+                currentSpeedKnots: position.speedKnots,
+                recommendedSpeedKnots: voyage.recommendedSpeedKnots,
+                plannedSpeedKnots: voyage.plannedSpeedKnots,
+                eta: voyage.eta,
+              }
+              const result = await sendSpeedRecommendation(payload)
+              window.alert(formatSpeedRecommendationSuccessAlert(payload, result))
+            } catch {
+              window.alert(SPEED_RECOMMENDATION_FAIL_ALERT)
+            } finally {
+              btn.disabled = false
+              btn.style.opacity = ''
+              btn.innerHTML = originalHtml
+            }
+          })()
+        }
+      })
 
       baseLayerRef.current = L.tileLayer(BASEMAP_URL, {
         maxZoom: 18,

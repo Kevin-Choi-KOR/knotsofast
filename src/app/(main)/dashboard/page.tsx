@@ -13,6 +13,7 @@ import { SummaryCards } from '@/features/dashboard/SummaryCards'
 import { FleetGaugeCard } from '@/features/dashboard/FleetGaugeCard'
 import { FilterBar } from '@/features/dashboard/FilterBar'
 import { ListPanel } from '@/features/dashboard/ListPanel'
+import { AutoRefreshControl } from '@/features/dashboard/AutoRefreshControl'
 import {
   computeDestinations,
   computeVisibleVoyageIds,
@@ -180,7 +181,9 @@ export default function Page() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <PageHeader title="실시간 운항 대시보드" subtitle="선박 위치 및 항로·해상 기상 현황" />
+      <PageHeader title="실시간 운항 대시보드" subtitle="선박 위치 및 항로·해상 기상 현황">
+        <AutoRefreshControl />
+      </PageHeader>
 
       {/* 상단 요약 카드 6종 */}
       <SummaryCards vessels={vessels} voyages={voyages} activeVoyages={activeVoyages} fleetGaugeRows={fleetGaugeRows} />
