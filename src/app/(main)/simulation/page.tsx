@@ -7,8 +7,18 @@ import { useVoyages } from '@/shared/hooks/useVoyages'
 import { useLanguage } from '@/features/i18n/LanguageContext'
 import { getFleetType } from '@/shared/utils/fleet'
 import type { PortCongestion } from '@/mocks/simulation'
+import { AVG_BERTH_UNLOAD_HOURS, CONGESTION_WAIT_HOURS, WAIT_COST_USD_PER_HOUR } from '@/mocks/simulation'
 import type { SimInputs, SimRoute } from '@/shared/utils/simulation'
+import {
+  computeHistoricalResult,
+  computePlannedResult,
+  computeSaving,
+  computeSimulatedResult,
+} from '@/shared/utils/simulation'
 import { SimulationForm } from './components/SimulationForm'
+import { SavingsCard } from './components/SavingsCard'
+import { EtaCard } from './components/EtaCard'
+import { ComparisonChart } from './components/ComparisonChart'
 
 export default function SimulationPage() {
   const { t } = useLanguage()
@@ -88,7 +98,11 @@ export default function SimulationPage() {
 
   const selectedVoyage = ownVoyages.find((v) => v.id === voyageId) ?? ownVoyages[0]
 
-  if (!applied || !selectedVoyage) {
+  // 결과·차트는 오직 applied만 참조한다 — 초안 값을 섞어 쓰면 "실행을 눌러야 반영"이라는 핵심 규칙이 깨진다.
+  const appliedVoyage = applied ? (ownVoyages.find((v) => v.id === applied.voyageId) ?? selectedVoyage) : undefined
+  const appliedVessel = appliedVoyage ? vessels.find((v) => v.id === appliedVoyage.vesselId) : undefined
+
+  if (!applied || !selectedVoyage || !appliedVoyage || !appliedVessel) {
     return (
       <div className="flex h-full flex-col">
         <PageHeader title={t.simulation.title} subtitle={t.simulation.subtitle} />
@@ -96,6 +110,18 @@ export default function SimulationPage() {
       </div>
     )
   }
+
+  const compareVoyage = completedVoyages.find((v) => v.id === applied.compareVoyageId)
+  const compareVessel = compareVoyage ? vessels.find((v) => v.id === compareVoyage.vesselId) : undefined
+
+  const congestionWaitHours = CONGESTION_WAIT_HOURS[applied.portCongestion]
+  const berthWaitHours = Math.max(0, ((100 - applied.berthProgress) / 100) * AVG_BERTH_UNLOAD_HOURS)
+  const portWaitHours = congestionWaitHours + berthWaitHours
+
+  const planned = computePlannedResult(appliedVoyage, appliedVessel, applied)
+  const simulated = computeSimulatedResult(appliedVoyage, appliedVessel, applied, portWaitHours)
+  const historical = compareVoyage && compareVessel ? computeHistoricalResult(compareVoyage, compareVessel) : null
+  const saving = computeSaving(planned, simulated)
 
   return (
     <div className="flex h-full flex-col">
@@ -129,7 +155,18 @@ export default function SimulationPage() {
             onDownloadPdf={() => {}}
           />
 
-          <div className="space-y-4" />
+          <div className="space-y-4">
+            <SavingsCard saving={saving} />
+            <EtaCard
+              plannedEta={appliedVoyage.eta}
+              plannedDays={planned.days}
+              simEta={simulated.eta}
+              simDays={simulated.days}
+              portWaitHours={portWaitHours}
+              portWaitCostUsd={portWaitHours * WAIT_COST_USD_PER_HOUR}
+            />
+            <ComparisonChart planned={planned} simulated={simulated} historical={historical} />
+          </div>
         </div>
       </div>
     </div>
