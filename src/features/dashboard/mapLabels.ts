@@ -37,6 +37,14 @@ export interface MapLabels {
   portEtd: (etd: string) => string
   portBoundFor: (destination: string, etaDate: string) => string
   portFrom: (origin: string, eta: string) => string
+  // 자사 선박의 계획 항로(점선) 위 mouseover 툴팁 — AI 운항 리포트 요약.
+  routeSummaryTitle: string
+  vsPlan: (diffKt: string) => string
+  routeFuelSaving: string
+  routeCo2Saving: string
+  rtaFeasibleLabel: string
+  rtaFeasible: string
+  rtaInfeasible: string
   // DASHBOARD.md 14장 23번 — 날짜·숫자는 ko-KR 고정이되, 지도 팝업만 선택된 지도 언어의
   // 로케일을 따른다. 팝업 빌더가 앱 전역 formatDate/formatDateTime(ko-KR 고정)을 쓰지 않도록
   // 언어별 포맷터를 사전 자체에 들고 있는다.
@@ -148,6 +156,13 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `출항 예정: ${etd}`,
     portBoundFor: (dest, date) => `목적지: ${dest} · ETA ${date}`,
     portFrom: (origin, eta) => `출발: ${origin} · ETA ${eta}`,
+    routeSummaryTitle: 'AI 운항 리포트 요약',
+    vsPlan: (diffKt) => `계획 대비 ${diffKt}kt`,
+    routeFuelSaving: '연료 절감',
+    routeCo2Saving: 'CO₂ 절감',
+    rtaFeasibleLabel: 'RTA 충족',
+    rtaFeasible: '가능',
+    rtaInfeasible: '불가능',
     formatDate: makeDateFormatter('ko-KR'),
     formatDateTime: makeDateTimeFormatter('ko-KR'),
   },
@@ -184,6 +199,13 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `Departing: ${etd}`,
     portBoundFor: (dest, date) => `Bound for: ${dest} · ETA ${date}`,
     portFrom: (origin, eta) => `From: ${origin} · ETA ${eta}`,
+    routeSummaryTitle: 'AI Voyage Report Summary',
+    vsPlan: (diffKt) => `${diffKt}kt vs plan`,
+    routeFuelSaving: 'Fuel Saving',
+    routeCo2Saving: 'CO₂ Saved',
+    rtaFeasibleLabel: 'Meets RTA',
+    rtaFeasible: 'Feasible',
+    rtaInfeasible: 'Infeasible',
     formatDate: makeDateFormatter('en-US'),
     formatDateTime: makeDateTimeFormatter('en-US'),
   },
@@ -220,6 +242,13 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `预计出发: ${etd}`,
     portBoundFor: (dest, date) => `目的地: ${dest} · 预计到达 ${date}`,
     portFrom: (origin, eta) => `出发地: ${origin} · 预计到达 ${eta}`,
+    routeSummaryTitle: 'AI航行报告摘要',
+    vsPlan: (diffKt) => `较计划 ${diffKt}节`,
+    routeFuelSaving: '节省燃料',
+    routeCo2Saving: 'CO₂减排',
+    rtaFeasibleLabel: '满足RTA',
+    rtaFeasible: '可行',
+    rtaInfeasible: '不可行',
     formatDate: makeDateFormatter('zh-CN'),
     formatDateTime: makeDateTimeFormatter('zh-CN'),
   },
@@ -256,6 +285,13 @@ export const MAP_LABELS: Record<MapLang, MapLabels> = {
     portEtd: (etd) => `出港予定: ${etd}`,
     portBoundFor: (dest, date) => `目的地: ${dest} · ETA ${date}`,
     portFrom: (origin, eta) => `出発地: ${origin} · ETA ${eta}`,
+    routeSummaryTitle: 'AI運航レポート要約',
+    vsPlan: (diffKt) => `計画比 ${diffKt}kt`,
+    routeFuelSaving: '燃料削減',
+    routeCo2Saving: 'CO₂削減',
+    rtaFeasibleLabel: 'RTA達成',
+    rtaFeasible: '可能',
+    rtaInfeasible: '不可能',
     formatDate: makeDateFormatter('ja-JP'),
     formatDateTime: makeDateTimeFormatter('ja-JP'),
   },

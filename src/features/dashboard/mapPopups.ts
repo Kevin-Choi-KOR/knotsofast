@@ -3,7 +3,7 @@ import { formatPortLabel, getPortCode, type Port } from '@/mocks/ports'
 import type { RegionalIssue, TyphoonWarning } from '@/mocks/map-overlays'
 import type { PortAggregate, PortVesselEntry } from '@/features/dashboard/portAggregation'
 import type { MapLabels } from '@/features/dashboard/mapLabels'
-import type { AisPosition, Vessel, Voyage } from '@/shared/types'
+import type { AisPosition, EcoSpeedReport, Vessel, Voyage } from '@/shared/types'
 
 function portShortLabel(portLabel: string): string {
   return getPortCode(portLabel) ?? portLabel.split(' ')[0]
@@ -154,5 +154,20 @@ export function buildVesselPopupHtml(
       <tr><td style="color:#64748b;">${escapeHtml(labels.status)}</td><td style="text-align:right;">${statusBadge}</td></tr>
     </table>
     ${sendSpeedBtn}
+  </div>`
+}
+
+// 자사 선박의 계획 항로(점선) 위 mouseover 툴팁 — AI 운항 리포트(EcoSpeedReport)를 3~4줄로 요약한다.
+export function buildRouteReportTooltipHtml(report: EcoSpeedReport, labels: MapLabels): string {
+  const diff = report.recommendedSpeed - report.currentPlanSpeed
+  const diffSign = diff > 0 ? '+' : diff < 0 ? '-' : ''
+  const diffKt = `${diffSign}${Math.abs(diff).toFixed(1)}`
+  const rta = report.canMeetRta ? labels.rtaFeasible : labels.rtaInfeasible
+
+  return `<div style="width:200px;font-size:11px;line-height:1.6;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:2px;">${escapeHtml(labels.routeSummaryTitle)}</div>
+    <div>${escapeHtml(labels.recommendedSpeed)}: <b>${report.recommendedSpeed.toFixed(1)}kt</b> (${escapeHtml(labels.vsPlan(diffKt))})</div>
+    <div>${escapeHtml(labels.routeFuelSaving)} ${report.fuelSavingPercent.toFixed(1)}% · ${escapeHtml(labels.routeCo2Saving)} ${report.co2SavedTon.toFixed(1)}t</div>
+    <div>${escapeHtml(labels.rtaFeasibleLabel)}: ${escapeHtml(rta)}</div>
   </div>`
 }

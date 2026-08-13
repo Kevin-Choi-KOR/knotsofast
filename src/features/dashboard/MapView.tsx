@@ -16,7 +16,13 @@ import {
   buildWeatherIcon,
   TYPHOON_INTENSITY_COLOR,
 } from '@/features/dashboard/mapIcons'
-import { buildIssuePopupHtml, buildPortPopupHtml, buildTyphoonPopupHtml, buildVesselPopupHtml } from '@/features/dashboard/mapPopups'
+import {
+  buildIssuePopupHtml,
+  buildPortPopupHtml,
+  buildRouteReportTooltipHtml,
+  buildTyphoonPopupHtml,
+  buildVesselPopupHtml,
+} from '@/features/dashboard/mapPopups'
 import { MAP_LABELS, type MapLang } from '@/features/dashboard/mapLabels'
 import { useMarineWeather } from '@/features/dashboard/useMarineWeather'
 import { useTyphoons } from '@/features/dashboard/useTyphoons'
@@ -31,7 +37,7 @@ import {
 import { OWN_COMPANY_NAME } from '@/shared/constants'
 import type { MapLayers } from '@/features/dashboard/filters'
 import type { PortAggregate } from '@/features/dashboard/portAggregation'
-import type { AisPosition, Vessel, Voyage } from '@/shared/types'
+import type { AisPosition, EcoSpeedReport, Vessel, Voyage } from '@/shared/types'
 
 const ERROR_TILE_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
@@ -82,6 +88,7 @@ export interface MapViewProps {
   portAggregates: Map<string, PortAggregate> // 9.6장 — page.tsx에서 한 번만 계산해 지도·리스트가 공유
   layers: MapLayers
   focusTarget?: MapFocusTarget
+  reports: EcoSpeedReport[] // 자사 선박 계획 항로 mouseover 툴팁(AI 운항 리포트 요약)용
 }
 
 // DASHBOARD.md 9.3장 — 세계지도가 반복되는 건 가로 방향뿐이다. 세로까지 맞추면
@@ -94,7 +101,7 @@ function applyMinZoom(map: LeafletMap, container: HTMLDivElement) {
   if (map.getZoom() < minZoom) map.setZoom(minZoom)
 }
 
-function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates, layers, focusTarget }: MapViewProps) {
+function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates, layers, focusTarget, reports }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const leafletModuleRef = useRef<typeof import('leaflet') | null>(null)
@@ -345,10 +352,19 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
 
       const statusColor = VOYAGE_STATUS_COLOR[voyage.status]
       const displayRoute = getDisplayRoute(voyage)
+      const isOwn = vessel.company === OWN_COMPANY_NAME
+
+      // 자사(My) 선박만 — 계획 항로 mouseover 시 AI 운항 리포트 요약을 툴팁으로 보여준다.
+      // 리포트가 아직 없는 항차는 조용히 건너뛴다(점선은 그대로 그려지되 툴팁만 없음).
+      const report = isOwn ? reports.find((r) => r.voyageId === voyage.id) : undefined
+      const routeTooltipHtml = report ? buildRouteReportTooltipHtml(report, labels) : null
 
       // ① 계획 항로 — 점선. wrapRouteSegments로 이음매를 가로지르는 구간을 선분으로 분할한다.
+      // 실제 항적(②)이 같은 구간 위에 실선으로 덧그려지므로, 이미 지나간 구간은 실선이 마우스
+      // 이벤트를 가로채 자연히 "앞으로 지나갈" 구간에서만 툴팁이 뜬다.
       for (const segment of wrapRouteSegments(displayRoute)) {
-        L.polyline(segment, { color: statusColor, weight: 2, dashArray: '8,6', opacity: 0.6 }).addTo(layerGroup)
+        const plannedLine = L.polyline(segment, { color: statusColor, weight: 2, dashArray: '8,6', opacity: 0.6 }).addTo(layerGroup)
+        if (routeTooltipHtml) plannedLine.bindTooltip(routeTooltipHtml, { sticky: true })
       }
 
       // ② 실제 항적 — 현재 AIS 위치까지 잘라낸 실선.
@@ -359,14 +375,13 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
 
       // ③ 선박 마커 — AIS 위치가 있을 때만 그린다.
       if (position) {
-        const isOwn = vessel.company === OWN_COMPANY_NAME
         const icon = buildVesselIcon(L, { isOwn, statusColor, cogDegrees: position.cogDegrees })
         const marker = L.marker([position.lat, wrapLng(position.lng)], { icon })
         marker.bindPopup(buildVesselPopupHtml(vessel, voyage, position, isOwn, statusColor, labels))
         marker.addTo(layerGroup)
       }
     }
-  }, [mapReady, visibleVoyageIds, vessels, voyages, positions, mapLang])
+  }, [mapReady, visibleVoyageIds, vessels, voyages, positions, mapLang, reports])
 
   // DASHBOARD.md 9.8장 — 오버레이 레이어(위험구역·태풍·지역 이슈·기상). 카테고리별로 layers
   // 플래그를 확인해가며 하나의 overlayLayer에 다시 그린다(9.5장).
