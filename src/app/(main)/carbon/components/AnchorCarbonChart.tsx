@@ -39,7 +39,8 @@ export function AnchorCarbonChart({ baseline, optimized }: { baseline: AnchorSce
       borderColor: c.tooltipBorder,
       textStyle: { color: c.tooltipText },
       formatter: (params: { seriesName: string; value: number; marker: string; name: string }[]) => {
-        const total = params.reduce((sum, p) => sum + p.value, 0)
+        // reduce()의 부동소수점 합산 오차가 그대로 노출되지 않도록 toFixed(1)을 거친다.
+        const total = params.reduce((sum, p) => sum + p.value, 0).toFixed(1)
         const lines = params.map((p) => `${p.marker} ${p.seriesName}: <b>${p.value}</b> ton`)
         return [params[0]?.name, ...lines, `${t.carbon.colTotalCo2}: <b>${total}</b> ton`].join('<br/>')
       },
