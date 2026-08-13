@@ -1,0 +1,23 @@
+model Vessel {
+  id                 String   @id
+  name               String
+  imo                String
+  type               String
+  flag               String
+  company            String
+  grossTonnage       Int
+  lengthOverall      Float
+  beam               Float
+  maxDraft           Float
+  currentDraft       Float
+  enginePower        Int
+  fuelCurve          Json
+  designSpeedKnots   Float
+  designSpeedFuelTon Float
+  foulingFactor      Float
+  status             String
+  buildYear          Int
+
+  voyages  Voyage[]
+  position AisPosition?
+}

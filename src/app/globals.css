@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
+/* 클래스 기반 다크 모드 (Tailwind v4) */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f8f9ff;
+  --fg: #0f172a;
+  --color-brand-primary: #6366f1;
+  --color-brand-indigo: #6366f1;
+  --color-brand-eco: #10b981;
+  --color-brand-amber: #f59e0b;
+  --color-brand-red: #ef4444;
+}
+
+.dark {
+  --bg: #020817;
+  --fg: #f1f5f9;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-mono: ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* 스크롤바 (전역 통일) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* 사이드바 이모지 보정 — 폰트 여백 때문에 접힘 상태에서 왼쪽으로 치우쳐 보이는 것을 보정 */
+.nav-emoji-nudge {
+  transform: translateX(-1px);
+}
+
+/* Leaflet 전용 (대시보드) */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes map-marker-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0.55;
+  }
+}
+
+.map-marker-pulse {
+  animation: map-marker-pulse 1.3s ease-in-out infinite alternate;
 }

@@ -1,0 +1,10 @@
+model User {
+  id                String  @id
+  name              String
+  email             String  @unique
+  role              String
+  assignedVesselIds Json?
+  department        String?
+  active            Boolean
+  passwordHash      String?
+}

@@ -1,0 +1,25 @@
+model Voyage {
+  id                    String   @id
+  vesselId              String
+  vessel                Vessel   @relation(fields: [vesselId], references: [id])
+  cargoDescription      String
+  departurePort         String
+  arrivalPort           String
+  etd                   String
+  sta                   String
+  rta                   String
+  rtaConfirmed          Boolean
+  eta                   String
+  status                String
+  plannedRoute          Json
+  actualRoute           Json
+  plannedSpeedKnots     Float
+  recommendedSpeedKnots Float
+  fuelType              String
+  cargoTon              Float
+  distanceNm            Float
+  createdAt             String?
+  updatedAt             String?
+
+  reports EcoSpeedReport[]
+}

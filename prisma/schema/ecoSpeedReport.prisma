@@ -1,0 +1,15 @@
+model EcoSpeedReport {
+  id                String  @id
+  voyageId          String
+  voyage            Voyage  @relation(fields: [voyageId], references: [id], onDelete: Cascade)
+  generatedAt       String
+  recommendedSpeed  Float
+  currentPlanSpeed  Float
+  fuelSavingPercent Float
+  co2SavedTon       Float
+  etaIfRecommended  String
+  canMeetRta        Boolean
+  reasoning         String
+  risks             Json
+  aiAnalyzedAt      String?
+}

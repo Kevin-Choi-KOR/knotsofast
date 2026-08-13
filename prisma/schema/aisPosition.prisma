@@ -1,0 +1,9 @@
+model AisPosition {
+  vesselId    String @id
+  vessel      Vessel @relation(fields: [vesselId], references: [id])
+  lat         Float
+  lng         Float
+  speedKnots  Float
+  cogDegrees  Float
+  updatedAt   String
+}
