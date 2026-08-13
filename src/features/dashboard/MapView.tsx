@@ -47,6 +47,13 @@ const BASEMAP_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{
 const SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const SEAMARK_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'
 
+const BASEMAP_MAX_NATIVE_ZOOM = 17
+// Esri World_Imagery는 해안에서 먼 원양 지역에 z14 이상 고해상도 이미지가 없어, 해당 줌에서
+// "Map data not yet available" 문구가 그려진 회색 타일을 200 응답으로 돌려준다(오류가 아니라서
+// errorTileUrl로 걸러지지 않는다 — SEAMARK와 동일한 유형의 문제). z13까지만 실타일을 요청하고
+// 그 이상은 업스케일만 하도록 막아 깨진 화면 대신 흐릿한 확대로 대체한다.
+const SATELLITE_MAX_NATIVE_ZOOM = 13
+
 const DEFAULT_CENTER: [number, number] = [20, 100]
 const DEFAULT_ZOOM = 3
 
@@ -219,7 +226,7 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
 
       baseLayerRef.current = L.tileLayer(BASEMAP_URL, {
         maxZoom: 18,
-        maxNativeZoom: 17,
+        maxNativeZoom: BASEMAP_MAX_NATIVE_ZOOM,
         errorTileUrl: ERROR_TILE_URL,
       }).addTo(map)
 
@@ -287,7 +294,11 @@ function MapView({ vessels, voyages, positions, visibleVoyageIds, portAggregates
   // DASHBOARD.md 9.10장 ② — 레이어를 추가·제거하지 않고 기본 타일의 setUrl()만 교체한다.
   useEffect(() => {
     if (!mapReady || !baseLayerRef.current) return
-    baseLayerRef.current.setUrl(mapType === 'satellite' ? SATELLITE_URL : BASEMAP_URL)
+    const layer = baseLayerRef.current
+    // 위성/기본 지도가 같은 레이어 인스턴스를 공유하므로, maxNativeZoom도 모드에 맞게 함께 바꾼다 —
+    // 안 그러면 위성 모드에서도 기본 지도의 17이 그대로 적용돼 원양 확대 시 깨진 타일이 나온다.
+    layer.options.maxNativeZoom = mapType === 'satellite' ? SATELLITE_MAX_NATIVE_ZOOM : BASEMAP_MAX_NATIVE_ZOOM
+    layer.setUrl(mapType === 'satellite' ? SATELLITE_URL : BASEMAP_URL)
   }, [mapReady, mapType])
 
   // DASHBOARD.md 11.3장 — RainViewer 강수 레이더. layers.radar가 꺼지면 레이어를 제거한다.

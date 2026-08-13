@@ -161,9 +161,10 @@ export default function Page() {
     setSelectedDestinationCode((prev) => (code === prev ? null : code))
   }
 
-  // 게이지 카드 LocateFixed: 줌 8, flyTo, 이동 후 해당 선박 팝업 자동 오픈.
+  // 게이지 카드 LocateFixed: flyTo, 이동 후 해당 선박 팝업 자동 오픈.
+  // 줌 8에서는 위성 모드 원양 지역에서 ZOOM LEVEL NOT SUPPORTED 플레이스홀더가 뜰 수 있어 7로 낮췄다.
   const locateVessel = (row: FleetGaugeRow) => {
-    focusMap({ lat: row.position.lat, lng: row.position.lng, zoom: 8, marker: { kind: 'vessel', id: row.vessel.id } })
+    focusMap({ lat: row.position.lat, lng: row.position.lng, zoom: 7, marker: { kind: 'vessel', id: row.vessel.id } })
   }
 
   // 9.9장 호출 지점 표 — 이슈 리스트 항목: 줌 6, flyTo, 팝업 있음.
