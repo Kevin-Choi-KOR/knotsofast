@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   AlertCircle,
   AlertTriangle,
@@ -39,6 +40,7 @@ import { Button } from '@/shared/components/Button'
 import { Card } from '@/shared/components/Card'
 import { RiskBadge } from '@/shared/components/StatusBadge'
 import { useReportView } from '../hooks/useReportView'
+import { generateReportPdf } from '../lib/reportPdf'
 import { VoyageProgressLine } from './VoyageProgressLine'
 import { ProbabilityGauge } from './ProbabilityGauge'
 import { StatCard, type StatCardAccent } from './StatCard'
@@ -154,6 +156,7 @@ export function ReportCard({
 }: ReportCardProps) {
   const { t } = useLanguage()
   const view = useReportView(vessel, voyage, report, position)
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
 
   const departureLabel = portFirstToken(voyage.departurePort)
   const arrivalLabel = portFirstToken(voyage.arrivalPort)
@@ -215,8 +218,17 @@ export function ReportCard({
         <Button
           variant="secondary"
           size="sm"
-          disabled
-          onClick={(e) => e.stopPropagation()}
+          disabled={isDownloadingPdf}
+          onClick={async (e) => {
+            e.stopPropagation()
+            setIsDownloadingPdf(true)
+            try {
+              const doc = await generateReportPdf({ vessel, voyage, report, view, weather: view.weather, t })
+              doc.save(`KSF-AIReport-${voyage.id}-${Date.now()}.pdf`)
+            } finally {
+              setIsDownloadingPdf(false)
+            }
+          }}
           className="hidden shrink-0 items-center gap-1.5 md:flex"
         >
           <FileDown className="h-3.5 w-3.5" />
