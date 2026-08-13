@@ -30,30 +30,9 @@ export interface DangerZone {
   color: string
 }
 
-export const MOCK_TYPHOONS: TyphoonWarning[] = [
-  {
-    id: 't001',
-    name: '태풍 MAWAR',
-    lat: 18,
-    lng: 135,
-    intensity: 'TY',
-    windSpeedKnots: 85,
-    radiusKm: 350,
-    movingDir: '북북서',
-    movingSpeedKnots: 12,
-  },
-  {
-    id: 't002',
-    name: '저기압 BOB-02',
-    lat: 12,
-    lng: 88,
-    intensity: 'TS',
-    windSpeedKnots: 45,
-    radiusKm: 200,
-    movingDir: '북',
-    movingSpeedKnots: 8,
-  },
-]
+// DASHBOARD.md 3.4장 — 태풍은 목업을 두지 않는다. GDACS 실시간 API(11.2장, L4)만 쓰고
+// 실패 시 빈 배열로 폴백한다. 실재하지 않는 태풍이 실시간 데이터처럼 표시되는 문제가
+// 원본에서 실제로 있었다.
 
 export const MOCK_REGIONAL_ISSUES: RegionalIssue[] = [
   {
@@ -170,3 +149,37 @@ export const MOCK_DANGER_ZONES: DangerZone[] = [
     color: '#8b5cf6',
   },
 ]
+
+export interface WeatherPoint {
+  name: string
+  lat: number
+  lng: number
+  windSpeed: number // m/s
+  windDir: number // 도(기상학적 — 바람이 불어오는 방향)
+  waveHeight: number // m
+}
+
+const WEATHER_LOCATIONS: { name: string; lat: number; lng: number }[] = [
+  { name: '아라비아해', lat: 15, lng: 65 },
+  { name: '말라카 해협', lat: 3, lng: 104 },
+  { name: '남중국해', lat: 12, lng: 118 },
+  { name: '서태평양', lat: 25, lng: 145 },
+  { name: '홍해', lat: 15, lng: 42 },
+  { name: '지중해', lat: 36, lng: 24 },
+  { name: '희망봉', lat: -35, lng: 20 },
+  { name: '북대서양', lat: 45, lng: -30 },
+]
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
+
+// DASHBOARD.md 3.5장 — Open-Meteo 실시간 API(11.1장, L4)를 붙이기 전까지 쓰는 폴백.
+export function generateMockWeatherPoints(): WeatherPoint[] {
+  return WEATHER_LOCATIONS.map((loc) => ({
+    ...loc,
+    windSpeed: randomBetween(3, 18),
+    windDir: randomBetween(0, 360),
+    waveHeight: randomBetween(0.5, 4.5),
+  }))
+}
