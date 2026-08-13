@@ -8,26 +8,40 @@ import { generateScope3CertificatePdf } from './certificatePdf'
 
 interface Scope3ModalProps {
   onClose: () => void
+  voyageId: string
   vesselName: string
+  vesselImo: string
+  vesselFlag: string
   departurePort: string
   arrivalPort: string
   distanceNm: number
   cargoDescription: string
+  cargoTon: number
+  fuelType: string
+  etd: string
+  eta: string
+  totalCo2Ton: number
   savedTon: number
   savedPct: number
-  voyageId: string
 }
 
 export function Scope3Modal({
   onClose,
+  voyageId,
   vesselName,
+  vesselImo,
+  vesselFlag,
   departurePort,
   arrivalPort,
   distanceNm,
   cargoDescription,
+  cargoTon,
+  fuelType,
+  etd,
+  eta,
+  totalCo2Ton,
   savedTon,
   savedPct,
-  voyageId,
 }: Scope3ModalProps) {
   const { t, lang } = useLanguage()
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -38,11 +52,19 @@ export function Scope3Modal({
 
     generateScope3CertificatePdf({
       lang,
+      voyageId,
       vesselName,
+      vesselImo,
+      vesselFlag,
       departurePort,
       arrivalPort,
       distanceNm,
       cargoDescription,
+      cargoTon,
+      fuelType,
+      etd,
+      eta,
+      totalCo2Ton,
       savedTon,
       savedPct,
     }).then((doc) => {
@@ -56,7 +78,24 @@ export function Scope3Modal({
       // 메모리 누수 방지 — 모달이 닫히거나 언어가 바뀌면 이전 blob URL을 해제한다.
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [lang, vesselName, departurePort, arrivalPort, distanceNm, cargoDescription, savedTon, savedPct])
+  }, [
+    lang,
+    voyageId,
+    vesselName,
+    vesselImo,
+    vesselFlag,
+    departurePort,
+    arrivalPort,
+    distanceNm,
+    cargoDescription,
+    cargoTon,
+    fuelType,
+    etd,
+    eta,
+    totalCo2Ton,
+    savedTon,
+    savedPct,
+  ])
 
   return (
     <div
