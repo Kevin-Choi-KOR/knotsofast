@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Container, Skull, ShieldAlert, Tornado, Waves } from 'lucide-react'
 import type { RegionalIssue, TyphoonWarning } from '@/mocks/map-overlays'
 import { ISSUE_TYPE_COLOR } from '@/features/dashboard/issueTypes'
+import type { MapLabels } from '@/features/dashboard/mapLabels'
 
 const ISSUE_TYPE_ICON: Record<RegionalIssue['type'], typeof Skull> = {
   piracy: Skull,
@@ -76,6 +77,7 @@ function windColor(speedMs: number): string {
 export function buildWeatherIcon(
   L: typeof Leaflet,
   point: { name: string; windSpeed: number; windDir: number; waveHeight: number },
+  labels: MapLabels,
 ): Leaflet.DivIcon {
   const color = windColor(point.windSpeed)
 
@@ -86,7 +88,7 @@ export function buildWeatherIcon(
       </svg>
       <span style="font-size:12px;font-weight:700;color:${color};">${point.windSpeed.toFixed(1)}m/s</span>
     </div>
-    <div style="font-size:10px;color:#475569;">파고 ${point.waveHeight.toFixed(1)}m</div>
+    <div style="font-size:10px;color:#475569;">${labels.waveHeight} ${point.waveHeight.toFixed(1)}m</div>
     <div style="font-size:8px;color:#94a3b8;">${point.name}</div>
   </div>`
 

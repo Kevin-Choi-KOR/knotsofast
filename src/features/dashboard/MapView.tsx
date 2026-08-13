@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Map as LeafletMap, LayerGroup, Marker, TileLayer } from 'leaflet'
+import { Anchor, ChevronDown, Satellite, Ship } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
+import { cn } from '@/shared/utils/cn'
 import { PORTS } from '@/mocks/ports'
 import { MOCK_DANGER_ZONES, MOCK_REGIONAL_ISSUES, generateMockWeatherPoints, type TyphoonWarning } from '@/mocks/map-overlays'
 import { WORLD_BOUNDS, wrapLng } from '@/features/dashboard/mapCoords'
 import { buildIssueIcon, buildPortIcon, buildTyphoonIcon, buildWeatherIcon, TYPHOON_INTENSITY_COLOR } from '@/features/dashboard/mapIcons'
 import { buildIssuePopupHtml, buildPortPopupHtml, buildTyphoonPopupHtml } from '@/features/dashboard/mapPopups'
+import { MAP_LABELS, type MapLang } from '@/features/dashboard/mapLabels'
 import type { MapLayers } from '@/features/dashboard/filters'
 import type { PortAggregate } from '@/features/dashboard/portAggregation'
 
@@ -15,6 +18,7 @@ const ERROR_TILE_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
 const BASEMAP_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+const SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const SEAMARK_URL = 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'
 
 const DEFAULT_CENTER: [number, number] = [20, 100]
@@ -23,6 +27,27 @@ const DEFAULT_ZOOM = 3
 // DASHBOARD.md 3.4장 — 태풍은 목업을 두지 않는다. GDACS 실시간 API(11.2장, L4)가 붙기 전까지는
 // 항상 빈 배열이며, 태풍 레이어에는 아무것도 그려지지 않는 것이 정상이다.
 const NO_TYPHOONS: TyphoonWarning[] = []
+
+// DASHBOARD.md 9.10장 ①.
+const LANG_OPTIONS: { value: MapLang; label: string; title: string }[] = [
+  { value: 'ko', label: '한국어', title: '지도 위 정보 표시 언어: 한국어' },
+  { value: 'en', label: 'English', title: 'Map info display language: English' },
+  { value: 'zh', label: '中文', title: '地图信息显示语言：中文' },
+  { value: 'ja', label: '日本語', title: '地図上の情報表示言語：日本語' },
+]
+
+const STATUS_LEGEND: { label: string; color: string }[] = [
+  { label: '운항 중', color: '#3b82f6' },
+  { label: '지연', color: '#ef4444' },
+  { label: '준비 중', color: '#94a3b8' },
+  { label: '완료', color: '#22c55e' },
+]
+
+const OVERLAY_LEGEND: { label: string; color: string }[] = [
+  { label: '해적/위협구역', color: '#ef4444' },
+  { label: '충돌위험구역', color: '#f59e0b' },
+  { label: '분쟁수역', color: '#8b5cf6' },
+]
 
 // DASHBOARD.md 9.9장 — 리스트·게이지 카드 등 외부에서 지도를 이동시키는 인터페이스.
 export interface MapFocusTarget {
@@ -62,6 +87,11 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
   const portMarkersRef = useRef<Map<string, Marker>>(new Map())
   const issueMarkersRef = useRef<Map<string, Marker>>(new Map())
   const [mapReady, setMapReady] = useState(false)
+
+  // DASHBOARD.md 9.10장 — 지도 위 오버레이 UI 상태(전부 지도 타일이 아니라 우리가 그리는 정보에만 영향).
+  const [mapLang, setMapLang] = useState<MapLang>('ko')
+  const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard')
+  const [legendOpen, setLegendOpen] = useState(false)
 
   const weatherPoints = useMemo(() => generateMockWeatherPoints(), [])
 
@@ -148,6 +178,12 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
     }
   }, [])
 
+  // DASHBOARD.md 9.10장 ② — 레이어를 추가·제거하지 않고 기본 타일의 setUrl()만 교체한다.
+  useEffect(() => {
+    if (!mapReady || !baseLayerRef.current) return
+    baseLayerRef.current.setUrl(mapType === 'satellite' ? SATELLITE_URL : BASEMAP_URL)
+  }, [mapReady, mapType])
+
   // DASHBOARD.md 9.6장 — 항구 레이어. layers.ports가 꺼지면 아무것도 그리지 않는다.
   // effect는 항상 clearLayers()로 비운 뒤 다시 그린다(9.5장).
   useEffect(() => {
@@ -159,16 +195,17 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
     portMarkersRef.current.clear()
     if (!layers.ports) return
 
+    const labels = MAP_LABELS[mapLang]
     for (const port of PORTS) {
       const agg = portAggregates.get(port.code)
       const count = (agg?.berthed.length ?? 0) + (agg?.departing.length ?? 0) + (agg?.arriving.length ?? 0)
 
       const marker = L.marker([port.lat, wrapLng(port.lng)], { icon: buildPortIcon(L, count) })
-      marker.bindPopup(buildPortPopupHtml(port, agg))
+      marker.bindPopup(buildPortPopupHtml(port, agg, labels))
       marker.addTo(layerGroup)
       portMarkersRef.current.set(port.code, marker)
     }
-  }, [mapReady, portAggregates, layers.ports])
+  }, [mapReady, portAggregates, layers.ports, mapLang])
 
   // DASHBOARD.md 9.8장 — 오버레이 레이어(위험구역·태풍·지역 이슈·기상). 카테고리별로 layers
   // 플래그를 확인해가며 하나의 overlayLayer에 다시 그린다(9.5장).
@@ -179,6 +216,8 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
 
     layerGroup.clearLayers()
     issueMarkersRef.current.clear()
+
+    const labels = MAP_LABELS[mapLang]
 
     if (layers.dangerZones) {
       for (const zone of MOCK_DANGER_ZONES) {
@@ -208,7 +247,7 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
         }).addTo(layerGroup)
 
         L.marker([typhoon.lat, wrapLng(typhoon.lng)], { icon: buildTyphoonIcon(L, typhoon.intensity) })
-          .bindPopup(buildTyphoonPopupHtml(typhoon))
+          .bindPopup(buildTyphoonPopupHtml(typhoon, labels))
           .addTo(layerGroup)
       }
     }
@@ -216,7 +255,7 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
     if (layers.issues) {
       for (const issue of MOCK_REGIONAL_ISSUES) {
         const marker = L.marker([issue.lat, wrapLng(issue.lng)], { icon: buildIssueIcon(L, issue.type) })
-        marker.bindPopup(buildIssuePopupHtml(issue))
+        marker.bindPopup(buildIssuePopupHtml(issue, labels))
         marker.addTo(layerGroup)
         issueMarkersRef.current.set(issue.id, marker)
       }
@@ -224,10 +263,10 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
 
     if (layers.weather) {
       for (const point of weatherPoints) {
-        L.marker([point.lat, wrapLng(point.lng)], { icon: buildWeatherIcon(L, point), pane: 'weatherPane' }).addTo(layerGroup)
+        L.marker([point.lat, wrapLng(point.lng)], { icon: buildWeatherIcon(L, point, labels), pane: 'weatherPane' }).addTo(layerGroup)
       }
     }
-  }, [mapReady, layers.dangerZones, layers.typhoon, layers.issues, layers.weather, weatherPoints])
+  }, [mapReady, layers.dangerZones, layers.typhoon, layers.issues, layers.weather, weatherPoints, mapLang])
 
   // DASHBOARD.md 9.9장 — 지도 이동(focus) 처리. 의존성은 [mapReady, focusTarget?.token]뿐이다 —
   // 좌표가 같아도 token만 바뀌면 재실행되게 하기 위해, 실제 좌표는 ref로 최신값만 읽는다.
@@ -257,7 +296,117 @@ function MapView({ portAggregates, layers, focusTarget }: MapViewProps) {
     }
   }, [mapReady, focusTarget?.token])
 
-  return <div ref={containerRef} className="absolute inset-0" />
+  return (
+    <>
+      <div ref={containerRef} className="absolute inset-0" />
+
+      {/* 9.10장 ① 언어 선택기 */}
+      <div className="absolute top-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-full border border-slate-200 bg-white/95 p-1 shadow backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
+        {LANG_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            title={opt.title}
+            onClick={() => setMapLang(opt.value)}
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-medium',
+              mapLang === opt.value
+                ? 'bg-[#6366f1] text-white'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700',
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 9.10장 ② 지도 유형 */}
+      <div className="absolute top-3 right-3 z-10 flex items-center overflow-hidden rounded-full border border-slate-200 bg-white/95 shadow backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
+        <button
+          type="button"
+          onClick={() => setMapType('standard')}
+          className={cn(
+            'px-2.5 py-1 text-xs font-medium',
+            mapType === 'standard'
+              ? 'bg-[#6366f1] text-white'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700',
+          )}
+        >
+          기본 지도
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapType('satellite')}
+          className={cn(
+            'flex items-center gap-1 px-2.5 py-1 text-xs font-medium',
+            mapType === 'satellite'
+              ? 'bg-[#6366f1] text-white'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700',
+          )}
+        >
+          <Satellite size={12} />
+          위성
+        </button>
+      </div>
+
+      {/* 9.10장 ③ 범례 — 컨테이너 전체가 클릭 가능한 접기/펼치기, 기본값 접힘 */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setLegendOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setLegendOpen((v) => !v)
+          }
+        }}
+        className="absolute bottom-4 left-4 z-10 w-52 cursor-pointer rounded-xl bg-white p-3 text-xs shadow-lg dark:bg-slate-800"
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="flex-1 font-semibold text-slate-700 dark:text-slate-200">선박 상태</span>
+          <ChevronDown size={14} className={cn('shrink-0 transition-transform', !legendOpen && '-rotate-90')} />
+        </div>
+
+        {legendOpen && (
+          <div className="mt-2 space-y-2">
+            <div className="space-y-1">
+              {STATUS_LEGEND.map((item) => (
+                <div key={item.label} className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.label}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1 border-t border-slate-100 pt-2 dark:border-slate-700">
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <Ship size={12} className="shrink-0 text-slate-700 dark:text-slate-200" />
+                자사 선박
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <Ship size={12} className="shrink-0 text-slate-400 opacity-40" />
+                타사 선박 (참고용)
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <Anchor size={12} className="shrink-0 text-[#0ea5e9]" />
+                항구 (클릭 시 정박·출항·입항 정보)
+              </div>
+            </div>
+
+            <div className="space-y-1 border-t border-slate-100 pt-2 dark:border-slate-700">
+              <div className="font-medium text-slate-700 dark:text-slate-200">오버레이</div>
+              {OVERLAY_LEGEND.map((item) => (
+                <div key={item.label} className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                  <span className="inline-block h-0 w-4 shrink-0 border-t-2 border-dashed" style={{ borderColor: item.color }} />
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
 }
 
 export default MapView
